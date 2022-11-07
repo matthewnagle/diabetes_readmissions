@@ -1,0 +1,85 @@
+---
+title: "Project"
+author: "B203349"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Load packages
+
+```{r echo = TRUE, warning = FALSE, message = FALSE}
+library(sparklyr)
+library(dplyr)
+library(ggplot2)
+library(knitr)
+```
+
+## Connecting
+
+```{r warning = FALSE}
+sc = spark_connect(master = 'local')
+```
+
+## Read .csv and create dataframe
+```{r}
+diabetic_data = spark_read_csv(sc, '/Users/matt/Desktop/Dropbox/Home/College/Edinburgh - MSc Data Science/Big Data Analytics/diabetes_readmissions/RawData/diabetic_data.csv') 
+```
+
+# Exploratory analysis
+
+```{r diabetic_data}
+glimpse(diabetic_data)
+```
+
+## Readmission
+View the breakdown of readmissions
+
+```{r diabetic_data}
+diabetic_data %>% 
+  count(readmitted) %>%
+  kable()
+```
+
+Create a new column that classifies those readmitted within 30 days and those not
+
+```{r}
+diabetic_data = mutate(diabetic_data, early_readmission = ifelse(readmitted == '<30', '1', '0'))
+```
+
+```{r}
+select(diabetic_data, readmitted, early_readmission) %>%
+  head(15) %>%
+  kable()
+```
+
+## Diagnoses
+list the primary diagnosis
+```{r diabetic_data}
+diabetic_data %>% 
+  count(diag_1) %>%
+  #head(15) %>% #reduces to top 15 diagnoses
+  arrange(desc(n))%>%
+  kable()
+```
+List the secondary diagnosis
+```{r diabetic_data}
+diabetic_data %>% 
+  count(diag_2) %>%
+  #head(15) %>% #reduces to top 15 diagnoses
+  arrange(desc(n))%>%
+  kable()
+```
+
+list the tertiary diagnosis
+```{r diabetic_data}
+diabetic_data %>% 
+  count(diag_3) %>%
+  #head(15) %>% #reduces to top 15 diagnoses
+  arrange(desc(n))%>%
+  kable()
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

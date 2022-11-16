@@ -40,7 +40,7 @@ glimpse(diabetic_data)
 ```
 
 
-```{r diabetic_data}
+```{r diabetic_data, echo=TRUE}
 diabetic_data %>% 
   head(15) %>%
   kable()
@@ -87,6 +87,7 @@ summarise(diabetic_data, max_num_lab_procedures = max(num_lab_procedures))
 median(pull(diabetic_data, num_lab_procedures))
 IQR(pull(diabetic_data, num_lab_procedures))
 ```
+Lab procedures by age
 ```{r}
 diabetic_data %>%
   group_by(age) %>%

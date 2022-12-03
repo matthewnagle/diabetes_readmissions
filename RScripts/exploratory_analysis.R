@@ -14,6 +14,7 @@ library(janitor)
 ## Connecting and read data from csv
 sc = spark_connect(master = 'local')
 diabetic_data = spark_read_csv(sc, '/Users/matt/Desktop/Dropbox/Home/College/Edinburgh - MSc Data Science/Big Data Analytics/diabetes_readmissions/RawData/diabetic_data.csv') 
+diabetic_data = spark_read_csv(sc, '/home/jovyan/Matt/diabetes_readmissions/RawData/diabetic_data.csv') 
 
 ##########################
 ## EXPLORATORY ANALYSIS ##

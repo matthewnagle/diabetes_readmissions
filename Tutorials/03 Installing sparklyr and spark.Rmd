@@ -23,6 +23,9 @@ Run the following command in the Rstudio console to install Spark 3.2.2:
 
 ```{r eval = FALSE}
 spark_install("3.2.2","3.2")
+spark_available_versions()
+spark_install(version = "3.2.2")
+spark_installed_versions()
 ```
 
 Installing spark only needs to be done once. You will notice a new folder called spark has been created in your working directory.

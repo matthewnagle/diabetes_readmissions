@@ -24,12 +24,12 @@ glimpse(diabetic_data)
 diabetic_data %>% 
   head(15) 
 
-diabetic_data <- as.data.frame(unclass(diabetic_data), stringsAsFactors = TRUE)
-
 #replace ? with NA
-
 diabetic_data <- diabetic_data %>%
   mutate(across(where(is.character), ~na_if(., "?")))
+
+diabetic_data <- as.data.frame(unclass(diabetic_data), stringsAsFactors = TRUE)
+
 
 #missing variable
 diabetic_data %>%

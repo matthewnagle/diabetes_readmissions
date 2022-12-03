@@ -1,0 +1,191 @@
+---
+title: "Machine learning modelling with sparklyr"
+output: html_document
+---
+
+In this exercise, we will be exploring some machine learning models with sparklyr.
+
+Load up the required packages.
+
+```{r warning=FALSE, message=FALSE}
+library(sparklyr)
+library(dplyr)
+library(ggplot2)
+library(knitr)
+library(broom)
+```
+
+Create a spark connection that treats your local machine as a cluster. Load up the built-in R dataset mtcars into a Spark dataframe.
+
+```{r warning = FALSE}
+sc = spark_connect(master = "local")
+cars = copy_to(sc, mtcars, overwrite = TRUE)
+```
+
+
+# Task 1
+
+One-hot encode the variable cyl, and create a new column called gear_relabelled,
+that relabels the gear variable so that it consists of numbers starting at 0. You
+may find the case_when function useful (Google it).
+
+```{r}
+cars = mutate(cars,
+  # one-hot encoding of cyl
+  cyl_4 = ifelse(cyl == 4, 1, 0),
+  cyl_6 = ifelse(cyl == 6, 1, 0),
+  cyl_8 = ifelse(cyl == 8, 1, 0),
+  # The levels must be labelled so that they start from 0
+  gear_relabelled = case_when(
+    gear == 3 ~ 0,
+    gear == 4 ~ 1,
+    gear == 5 ~ 2
+  )
+)
+```
+
+
+# Task 2
+
+Create a multinomial logistic regression model that predicts the number of gears,
+using hp and number of cylinders as predictor variables. **Remember to not fall
+into the dummy variable trap!** 
+Apply the tidy function to the model, and display the result of doing this 
+in a table. What do the entries in the table mean? What is their interpretation?
+Is there anything that was in the results table of the OLS model that is not
+present in the results table for this model?
+
+```{r  warning = FALSE}
+mn_model = ml_logistic_regression(cars,
+  gear_relabelled ~ hp + cyl_4 + cyl_6 + cyl_8,
+  fit_intercept = FALSE)
+# Also acceptable would be to fit an intercept, but only include two of: cyl_4, cyl_6, cyl_8
+
+mn_results = tidy(mn_model)
+
+kable(mn_results)
+```
+
+
+# Task 3
+
+Evaluate the multinomial logistic regression model. The main metrics that are
+of interest are true positive rate, false positive rate, accuracy, precision and
+recall. Print these metrics out. Do you notice anything about the true positive 
+rate and the recall?
+
+```{r  warning = FALSE}
+mn_model_metrics = ml_evaluate(mn_model, cars)
+
+mn_model_metrics$true_positive_rate_by_label()
+mn_model_metrics$false_positive_rate_by_label()
+mn_model_metrics$accuracy()
+mn_model_metrics$precision_by_label()
+mn_model_metrics$recall_by_label()
+```
+
+
+# Task 4
+
+Create a binary logistic regression model that predicts the variable am with hp and
+vs as predictor variables, using ml_generalized_linear_regression. 
+Apply the tidy function to the model, and display the result of doing this in a table.
+
+```{r}
+bin_model = ml_generalized_linear_regression(cars, am ~ hp + vs, family = "binomial")
+
+bin_results = tidy(bin_model)
+
+kable(bin_results)
+```
+
+
+# Task 5
+
+Recall that the odds ratio from a logistic regression model is given by the
+exponential of a fitted coefficient. The 95% confidence interval for the odds ratio
+is given by the exponential of the upper and lower limits of the 95% confidence
+interval for the fitted coefficient.
+
+In the results table, create three new columns for the odds ratio, and the upper
+and lower limits of its 95% confidence interval. Then create a column
+that has the odds ratio, followed by a bracket with the 95% confidence interval, 
+with all numbers rounded to 2 decimal places. Display the results in a table.
+
+```{r}
+bin_results =
+  mutate(bin_results,
+    OR = exp(estimate),
+    OR_lower_confidence = exp(estimate - 1.96 * std.error),
+    OR_upper_confidence = exp(estimate + 1.96 * std.error)
+  ) %>%
+  mutate(
+    OR_CI = paste0(round(OR, 2), " (", round(OR_lower_confidence, 2), ", ", round(OR_upper_confidence, 2), ")")
+  )
+
+kable(bin_results)
+```
+
+
+# Task 6
+
+Access and print out the AIC value for the model.
+
+```{r  warning = FALSE}
+bin_model_metrics = ml_evaluate(bin_model, cars)
+
+bin_model_metrics$aic()
+```
+
+
+# Task 7
+
+Create a new column that is the z-score of hp.
+
+```{r}
+cars = mutate(cars, z_hp = (hp - mean(hp, na.rm = TRUE)) / sd(hp, na.rm = TRUE))
+```
+
+
+# Task 8
+
+Create a multilayer perceptron classifier that predicts the variable gear, 
+using hp and number of cylinders as predictor variables. Extract predictions
+from the model, and show the first few rows of predictions in a table. 
+**Make sure that the number of neurons in the input and output layers are correct.
+Make sure that continuous variables are normalised, and categorical variables
+are one-hot encoded.**
+
+```{r}
+mlp_model = ml_multilayer_perceptron_classifier(
+  cars,
+  gear_relabelled ~ z_hp + cyl_4 + cyl_6 + cyl_8,
+  layers = c(4, 8, 8, 3)
+)
+predictions = ml_predict(mlp_model, cars)
+
+head(predictions)
+```
+
+# Task 9
+
+Use ml_evaluate to print out model metrics. Which metrics are available?
+
+```{r}
+ml_evaluate(mlp_model, cars)
+```
+
+
+# Task 10
+
+Create a gradient boosted tree classifier that predicts the variable am, 
+using hp and number of cylinders as predictor variables. Calculate the C
+statistic using ml_binary_classification_evaluator.
+
+```{r}
+gbt_model = ml_gradient_boosted_trees(cars, am ~ hp + cyl, type = "classification")
+predictions = ml_predict(gbt_model, cars)
+
+# ml_binary_classification_evaluator calculates area under ROC curve by default
+ml_binary_classification_evaluator(predictions, label_col = "am")
+```

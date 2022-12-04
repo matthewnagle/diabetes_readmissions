@@ -28,7 +28,7 @@ race_plot <-
   ggplot(aes(as.factor(race), n), data = race_group) +
   geom_col(fill = 'SteelBlue') +
   xlab('Count') +
-  ylab('Age group')
+  ylab('Race')
 #coord_flip()
 
 library(cowplot)

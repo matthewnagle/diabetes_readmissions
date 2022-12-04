@@ -25,7 +25,7 @@ diabetic_data <- diabetic_data %>%
       diag_1 >= 780 & diag_1 < 800 ~ 'ill_defined',
       diag_1 >= 800 & diag_1 < 1000 ~ 'injury_poisoning',
       rlike(diag_1, "V") | rlike(diag_1, "E") ~ 'supplementary',
-      #is.na(diag_1) ~ NA, #NA variable do not get special treatment
+      #is.na(diag_1) ~ NA, #NA variables do not get special treatment
       TRUE ~ diag_1),
     diag_2_cat = case_when(
       rlike(diag_2, "250") ~ 'diabetes', #case_when work in order

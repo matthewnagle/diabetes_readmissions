@@ -201,7 +201,7 @@ age_group = diabetic_data %>%
 ggplot(aes(as.factor(age), n), data = age_group) +
   geom_col(fill = 'SteelBlue') +
   xlab('Count') +
-  ylab('Age group') +
+  ylab('Age group')
   #coord_flip()
 
 #

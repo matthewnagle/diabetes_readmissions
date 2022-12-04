@@ -51,30 +51,7 @@ lg_model = ml_logistic_regression(diabetic_data, early_readmission ~
                                     fit_intercept = FALSE,
                                   family = "binomial")
 
-lg_model = ml_logistic_regression(diabetic_data, early_readmission ~
-                                   diag_1_infection +
-                                   diag_1_neoplasms +
-                                   diag_1_endo_metabolic_immunity +
-                                   diag_1_haematology +
-                                   diag_1_mental +
-                                   diag_1_neurology +
-                                   diag_1_circulatory +
-                                   diag_1_respiratory +
-                                   diag_1_digestive +
-                                   diag_1_genitourinary +
-                                   diag_1_preg_birth_puerperium +
-                                   diag_1_dermatology +
-                                   diag_1_musculoskeletal +
-                                   diag_1_congenital +
-                                   diag_1_perinatal +
-                                   diag_1_ill_defined +
-                                   diag_1_injury_poisoning +
-                                   diag_1_supplementary +
-                                   diag_1_diabetes, fit_intercept = FALSE,
-                                  family = "binomial")
-
-ml_generalized_linear_regression(data, formula, family = 'binomial')
-
+#worked 4/12/22 21:00
 lg_model = ml_logistic_regression(diabetic_data, early_readmission ~
                                     diag_1_infection +
                                     diag_1_neoplasms +
@@ -119,3 +96,35 @@ lg_model_metrics$false_positive_rate_by_label()
 lg_model_metrics$accuracy()
 lg_model_metrics$precision_by_label()
 lg_model_metrics$aic()
+
+#geradient boosted trees
+gbt_model = ml_gradient_boosted_trees(diabetic_data, early_readmission ~
+                                        diag_1_infection +
+                                        diag_1_neoplasms +
+                                        diag_1_endo_metabolic_immunity +
+                                        diag_1_haematology +
+                                        diag_1_mental +
+                                        diag_1_neurology +
+                                        diag_1_circulatory +
+                                        diag_1_respiratory +
+                                        diag_1_digestive +
+                                        diag_1_genitourinary +
+                                        diag_1_preg_birth_puerperium +
+                                        diag_1_dermatology +
+                                        diag_1_musculoskeletal +
+                                        diag_1_congenital +
+                                        diag_1_perinatal +
+                                        diag_1_ill_defined +
+                                        diag_1_injury_poisoning +
+                                        diag_1_supplementary +
+                                        diag_1_diabetes +
+                                        age_contin +
+                                        Asian +
+                                        AfricanAmerican +
+                                        Caucasian +
+                                        Hispanic +
+                                        Unknown, 
+                                      type = "classification")
+
+predictions = ml_predict(gbt_model, diabetic_data)
+ml_binary_classification_evaluator(predictions, label_col = "early_readmission")

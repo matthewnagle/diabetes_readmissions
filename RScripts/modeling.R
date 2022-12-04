@@ -8,7 +8,6 @@ features <- c("early_readmission", list_of_race_cat)
 ml_corr(diabetic_data, columns = features, method = "spearman")
 
 #OLS
-ols_model = ml_linear_regression(cars, mpg ~ hp + wt + cyl_4 + cyl_6 + cyl_8, fit_intercept = FALSE)
 ols_model = ml_linear_regression(diabetic_data, early_readmission ~ 
                                    diag_1_infection +
                                    diag_1_neoplasms,
@@ -35,12 +34,12 @@ ols_model = ml_linear_regression(diabetic_data, early_readmission ~
                                    diag_1_supplementary +
                                    diag_1_diabetes, fit_intercept = FALSE)
 
-ols_results = tidy(ols_model) #errors when using a lot of variables
+ols_results = tidy(ols_model) #? errors when using a lot of variables
 ols_model$coefficients # gives coefficients without tidy
 ols_results
 
 
-#logistic regression
+#logistic regression - if there are NA it will error
 lg_model = ml_logistic_regression(diabetic_data, early_readmission ~
                                     age_contin +
                                     Asian +
@@ -73,6 +72,8 @@ lg_model = ml_logistic_regression(diabetic_data, early_readmission ~
                                    diag_1_supplementary +
                                    diag_1_diabetes, fit_intercept = FALSE,
                                   family = "binomial")
+
+ml_generalized_linear_regression(data, formula, family = 'binomial')
 
 lg_model = ml_logistic_regression(diabetic_data, early_readmission ~
                                     diag_1_infection +

@@ -9,6 +9,7 @@ library(ggplot2)
 library(countrycode)
 library(dbplot)
 library(janitor)
+library(broom)
 
 
 ## Connecting and read data from csv

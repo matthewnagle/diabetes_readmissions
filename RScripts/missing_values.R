@@ -6,6 +6,10 @@ NA_count <- diabetic_data %>%
   summarise_all(~sum(as.integer(is.na(.)))) %>%
   collect()
 
-#transpose dataframe
-NA_count <- t(NA_count)
+#transpose dataframe (convert from wide to long)
+NA_count <- t(NA_count) 
+
+#rename column 1 to missing_values
+colnames(NA_count)[1] ="missing_values"
+
 NA_count

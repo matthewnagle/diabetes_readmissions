@@ -1,3 +1,7 @@
+# it is unclear whether missing data for diagnosis means it was not entered or
+# whether the patient just didn't have other concurrent issues - the latter potentially
+# being a significant predictive value
+
 glimpse(diabetic_data)
 head(diabetic_data)
 

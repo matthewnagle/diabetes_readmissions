@@ -1,8 +1,15 @@
 library(broom)
 
+
+
 #correlation
 features <- c("early_readmission", "age_cat", list_of_diag1_cat)
 ml_corr(diabetic_data, columns = features, method = "spearman")
+
+#Chi squared
+features <- c("FAF", "FCVC", "TUE", "CH2O") 
+ml_chisquare_test(obesity_data, features = features, label = "early_readmission")
+
 
 features <- c("early_readmission", list_of_race_cat)
 ml_corr(diabetic_data, columns = features, method = "spearman")

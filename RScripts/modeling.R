@@ -93,7 +93,15 @@ lg_model = ml_logistic_regression(diabetic_data, early_readmission ~
                                     A1Cresult_none +
                                     A1Cresult_norm +
                                     A1Cresult_7 +
-                                    A1Cresult_8,
+                                    A1Cresult_8 +
+                                    z_age_contin +
+                                    z_time_in_hospital +
+                                    z_num_lab_procedures +
+                                    z_num_procedures +
+                                    z_number_outpatient +
+                                    z_number_emergency +
+                                    z_number_inpatient +
+                                    z_number_diagnoses,
                                   fit_intercept = FALSE,
                                   family = "binomial")
 

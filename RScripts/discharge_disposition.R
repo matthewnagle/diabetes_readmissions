@@ -10,8 +10,8 @@ diabetic_data <- diabetic_data %>%
       discharge_disposition_id %in% c(9) ~ 'admitted',
       discharge_disposition_id %in% c(11,13,14,15,19,20,21) ~ 'hospice_expired',
       discharge_disposition_id %in% c(12,16,27) ~ 'outpatient',
-      discharge_disposition_id %in% c(18,25,26) ~ 'unknown',
-      is.na(discharge_disposition_id) ~ 'unknown', #NA variables do not get special treatment
+      discharge_disposition_id %in% c(18,25,26) ~ 'not_known',
+      is.na(discharge_disposition_id) ~ 'not_known', #NA variables do not get special treatment
       TRUE ~ discharge_disposition_id))
 
 
@@ -25,4 +25,13 @@ diabetic_data <- diabetic_data %>%
     admitted = ifelse(discharge_disposition_consolidated == 'admitted', 1,0),
     hospice_expired = ifelse(discharge_disposition_consolidated == 'hospice_expired', 1,0),
     outpatient = ifelse(discharge_disposition_consolidated == 'outpatient', 1,0),
-    unknown = ifelse(discharge_disposition_consolidated == 'unknown', 1,0))
+    not_known = ifelse(discharge_disposition_consolidated == 'not_known', 1,0))
+
+home +
+healthcare_facility +
+home_with_help +
+AMA +
+admitted +
+hospice_expired +
+outpatient +
+unknown +

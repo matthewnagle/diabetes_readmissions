@@ -46,49 +46,8 @@ ols_model$coefficients # gives coefficients without tidy
 ols_results
 
 
-#logistic regression - if there are NA it will error
-lg_model = ml_logistic_regression(diabetic_data, early_readmission ~
-                                    age_contin +
-                                    Asian +
-                                    AfricanAmerican +
-                                    Caucasian +
-                                    Hispanic +
-                                    Unknown,
-                                    #diag_1_infection
-                                    fit_intercept = FALSE,
-                                  family = "binomial")
-
-#worked 4/12/22 21:00
-lg_model = ml_logistic_regression(diabetic_data, early_readmission ~
-                                    diag_1_infection +
-                                    diag_1_neoplasms +
-                                    diag_1_endo_metabolic_immunity +
-                                    diag_1_haematology +
-                                    diag_1_mental +
-                                    diag_1_neurology +
-                                    diag_1_circulatory +
-                                    diag_1_respiratory +
-                                    diag_1_digestive +
-                                    diag_1_genitourinary +
-                                    diag_1_preg_birth_puerperium +
-                                    diag_1_dermatology +
-                                    diag_1_musculoskeletal +
-                                    diag_1_congenital +
-                                    diag_1_perinatal +
-                                    diag_1_ill_defined +
-                                    diag_1_injury_poisoning +
-                                    diag_1_supplementary +
-                                    diag_1_diabetes +
-                                    age_contin +
-                                    Asian +
-                                    AfricanAmerican +
-                                    Caucasian +
-                                    Hispanic +
-                                    Unknown,
-                                  fit_intercept = FALSE,
-                                  family = "binomial")
-
-#ran without error on 6/12/22 at 9:10
+#logistic regression - if there are NAs it will error
+#ran without error on 6/12/22 at 21:40
 lg_model = ml_logistic_regression(diabetic_data, early_readmission ~
                                     diag_1_infection +
                                     diag_1_neoplasms +
@@ -116,13 +75,25 @@ lg_model = ml_logistic_regression(diabetic_data, early_readmission ~
                                     admitted +
                                     hospice_expired +
                                     outpatient +
-                                    not_known +
+                                    unknown_discharge_disposition +
                                     age_contin +
-                                    Asian +
-                                    AfricanAmerican +
-                                    Caucasian +
-                                    Hispanic +
-                                    Unknown,
+                                    asian +
+                                    african_american +
+                                    caucasian +
+                                    hispanic +
+                                    unknown_race +
+                                    emergency +
+                                    urgent +
+                                    elective +
+                                    admisison_type_other +
+                                    max_glu_serum_none +
+                                    max_glu_serum_norm +
+                                    max_glu_serum_300 +
+                                    max_glu_serum_200 +
+                                    A1Cresult_none +
+                                    A1Cresult_norm +
+                                    A1Cresult_7 +
+                                    A1Cresult_8,
                                   fit_intercept = FALSE,
                                   family = "binomial")
 
@@ -143,6 +114,7 @@ lg_model_metrics$precision_by_label()
 lg_model_metrics$aic()
 
 #geradient boosted trees
+#ran without error 
 gbt_model = ml_gradient_boosted_trees(diabetic_data, early_readmission ~
                                         diag_1_infection +
                                         diag_1_neoplasms +
@@ -163,49 +135,24 @@ gbt_model = ml_gradient_boosted_trees(diabetic_data, early_readmission ~
                                         diag_1_injury_poisoning +
                                         diag_1_supplementary +
                                         diag_1_diabetes +
+                                        home +
+                                        healthcare_facility +
+                                        home_with_help +
+                                        AMA +
+                                        admitted +
+                                        hospice_expired +
+                                        outpatient +
+                                        unknown_discharge_disposition +
                                         age_contin +
-                                        Asian +
-                                        AfricanAmerican +
-                                        Caucasian +
-                                        Hispanic +
-                                        Unknown, 
-                                      type = "classification")
-
-#ran without error 
-gbt_model = ml_gradient_boosted_trees(diabetic_data, early_readmission ~
-                                    diag_1_infection +
-                                    diag_1_neoplasms +
-                                    diag_1_endo_metabolic_immunity +
-                                    diag_1_haematology +
-                                    diag_1_mental +
-                                    diag_1_neurology +
-                                    diag_1_circulatory +
-                                    diag_1_respiratory +
-                                    diag_1_digestive +
-                                    diag_1_genitourinary +
-                                    diag_1_preg_birth_puerperium +
-                                    diag_1_dermatology +
-                                    diag_1_musculoskeletal +
-                                    diag_1_congenital +
-                                    diag_1_perinatal +
-                                    diag_1_ill_defined +
-                                    diag_1_injury_poisoning +
-                                    diag_1_supplementary +
-                                    diag_1_diabetes +
-                                    home +
-                                    healthcare_facility +
-                                    home_with_help +
-                                    AMA +
-                                    admitted +
-                                    hospice_expired +
-                                    outpatient +
-                                    not_known +
-                                    age_contin +
-                                    Asian +
-                                    AfricanAmerican +
-                                    Caucasian +
-                                    Hispanic +
-                                    Unknown,
+                                        asian +
+                                        african_american +
+                                        caucasian +
+                                        hispanic +
+                                        unknown_race +
+                                        emergency +
+                                        urgent +
+                                        elective +
+                                        admisison_type_other,
                                     type = "classification")
 
 predictions = ml_predict(gbt_model, diabetic_data)

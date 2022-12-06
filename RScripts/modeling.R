@@ -68,6 +68,44 @@ lg_model = ml_logistic_regression(diabetic_data, early_readmission ~
                                     diag_1_injury_poisoning +
                                     diag_1_supplementary +
                                     diag_1_diabetes +
+                                    diag_2_infection +
+                                    diag_2_neoplasms +
+                                    diag_2_endo_metabolic_immunity +
+                                    diag_2_haematology +
+                                    diag_2_mental +
+                                    diag_2_neurology +
+                                    diag_2_circulatory +
+                                    diag_2_respiratory +
+                                    diag_2_digestive +
+                                    diag_2_genitourinary +
+                                    diag_2_preg_birth_puerperium +
+                                    diag_2_dermatology +
+                                    diag_2_musculoskeletal +
+                                    diag_2_congenital +
+                                    diag_2_perinatal +
+                                    diag_2_ill_defined +
+                                    diag_2_injury_poisoning +
+                                    diag_2_supplementary +
+                                    diag_2_diabetes +
+                                    diag_3_infection +
+                                    diag_3_neoplasms +
+                                    diag_3_endo_metabolic_immunity +
+                                    diag_3_haematology +
+                                    diag_3_mental +
+                                    diag_3_neurology +
+                                    diag_3_circulatory +
+                                    diag_3_respiratory +
+                                    diag_3_digestive +
+                                    diag_3_genitourinary +
+                                    diag_3_preg_birth_puerperium +
+                                    diag_3_dermatology +
+                                    diag_3_musculoskeletal +
+                                    diag_3_congenital +
+                                    diag_3_perinatal +
+                                    diag_3_ill_defined +
+                                    diag_3_injury_poisoning +
+                                    diag_3_supplementary +
+                                    diag_3_diabetes +
                                     home +
                                     healthcare_facility +
                                     home_with_help +
@@ -76,7 +114,7 @@ lg_model = ml_logistic_regression(diabetic_data, early_readmission ~
                                     hospice_expired +
                                     outpatient +
                                     unknown_discharge_disposition +
-                                    age_contin +
+                                    #age_contin +
                                     asian +
                                     african_american +
                                     caucasian +
@@ -143,6 +181,44 @@ gbt_model = ml_gradient_boosted_trees(diabetic_data, early_readmission ~
                                         diag_1_injury_poisoning +
                                         diag_1_supplementary +
                                         diag_1_diabetes +
+                                        diag_2_infection +
+                                        diag_2_neoplasms +
+                                        diag_2_endo_metabolic_immunity +
+                                        diag_2_haematology +
+                                        diag_2_mental +
+                                        diag_2_neurology +
+                                        diag_2_circulatory +
+                                        diag_2_respiratory +
+                                        diag_2_digestive +
+                                        diag_2_genitourinary +
+                                        diag_2_preg_birth_puerperium +
+                                        diag_2_dermatology +
+                                        diag_2_musculoskeletal +
+                                        diag_2_congenital +
+                                        diag_2_perinatal +
+                                        diag_2_ill_defined +
+                                        diag_2_injury_poisoning +
+                                        diag_2_supplementary +
+                                        diag_2_diabetes +
+                                        diag_3_infection +
+                                        diag_3_neoplasms +
+                                        diag_3_endo_metabolic_immunity +
+                                        diag_3_haematology +
+                                        diag_3_mental +
+                                        diag_3_neurology +
+                                        diag_3_circulatory +
+                                        diag_3_respiratory +
+                                        diag_3_digestive +
+                                        diag_3_genitourinary +
+                                        diag_3_preg_birth_puerperium +
+                                        diag_3_dermatology +
+                                        diag_3_musculoskeletal +
+                                        diag_3_congenital +
+                                        diag_3_perinatal +
+                                        diag_3_ill_defined +
+                                        diag_3_injury_poisoning +
+                                        diag_3_supplementary +
+                                        diag_3_diabetes +
                                         home +
                                         healthcare_facility +
                                         home_with_help +
@@ -151,7 +227,7 @@ gbt_model = ml_gradient_boosted_trees(diabetic_data, early_readmission ~
                                         hospice_expired +
                                         outpatient +
                                         unknown_discharge_disposition +
-                                        age_contin +
+                                        #age_contin +
                                         asian +
                                         african_american +
                                         caucasian +
@@ -160,7 +236,23 @@ gbt_model = ml_gradient_boosted_trees(diabetic_data, early_readmission ~
                                         emergency +
                                         urgent +
                                         elective +
-                                        admisison_type_other,
+                                        admisison_type_other +
+                                        max_glu_serum_none +
+                                        max_glu_serum_norm +
+                                        max_glu_serum_300 +
+                                        max_glu_serum_200 +
+                                        A1Cresult_none +
+                                        A1Cresult_norm +
+                                        A1Cresult_7 +
+                                        A1Cresult_8 +
+                                        z_age_contin +
+                                        z_time_in_hospital +
+                                        z_num_lab_procedures +
+                                        z_num_procedures +
+                                        z_number_outpatient +
+                                        z_number_emergency +
+                                        z_number_inpatient +
+                                        z_number_diagnoses,
                                     type = "classification")
 
 predictions = ml_predict(gbt_model, diabetic_data)

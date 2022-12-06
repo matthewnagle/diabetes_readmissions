@@ -88,6 +88,44 @@ lg_model = ml_logistic_regression(diabetic_data, early_readmission ~
                                   fit_intercept = FALSE,
                                   family = "binomial")
 
+#ran without error on 6/12/22 at 9:10
+lg_model = ml_logistic_regression(diabetic_data, early_readmission ~
+                                    diag_1_infection +
+                                    diag_1_neoplasms +
+                                    diag_1_endo_metabolic_immunity +
+                                    diag_1_haematology +
+                                    diag_1_mental +
+                                    diag_1_neurology +
+                                    diag_1_circulatory +
+                                    diag_1_respiratory +
+                                    diag_1_digestive +
+                                    diag_1_genitourinary +
+                                    diag_1_preg_birth_puerperium +
+                                    diag_1_dermatology +
+                                    diag_1_musculoskeletal +
+                                    diag_1_congenital +
+                                    diag_1_perinatal +
+                                    diag_1_ill_defined +
+                                    diag_1_injury_poisoning +
+                                    diag_1_supplementary +
+                                    diag_1_diabetes +
+                                    home +
+                                    healthcare_facility +
+                                    home_with_help +
+                                    AMA +
+                                    admitted +
+                                    hospice_expired +
+                                    outpatient +
+                                    not_known +
+                                    age_contin +
+                                    Asian +
+                                    AfricanAmerican +
+                                    Caucasian +
+                                    Hispanic +
+                                    Unknown,
+                                  fit_intercept = FALSE,
+                                  family = "binomial")
+
 
 summary(lg_model)
 lg_results = tidy(lg_model)
@@ -132,6 +170,43 @@ gbt_model = ml_gradient_boosted_trees(diabetic_data, early_readmission ~
                                         Hispanic +
                                         Unknown, 
                                       type = "classification")
+
+#ran without error 
+gbt_model = ml_gradient_boosted_trees(diabetic_data, early_readmission ~
+                                    diag_1_infection +
+                                    diag_1_neoplasms +
+                                    diag_1_endo_metabolic_immunity +
+                                    diag_1_haematology +
+                                    diag_1_mental +
+                                    diag_1_neurology +
+                                    diag_1_circulatory +
+                                    diag_1_respiratory +
+                                    diag_1_digestive +
+                                    diag_1_genitourinary +
+                                    diag_1_preg_birth_puerperium +
+                                    diag_1_dermatology +
+                                    diag_1_musculoskeletal +
+                                    diag_1_congenital +
+                                    diag_1_perinatal +
+                                    diag_1_ill_defined +
+                                    diag_1_injury_poisoning +
+                                    diag_1_supplementary +
+                                    diag_1_diabetes +
+                                    home +
+                                    healthcare_facility +
+                                    home_with_help +
+                                    AMA +
+                                    admitted +
+                                    hospice_expired +
+                                    outpatient +
+                                    not_known +
+                                    age_contin +
+                                    Asian +
+                                    AfricanAmerican +
+                                    Caucasian +
+                                    Hispanic +
+                                    Unknown,
+                                    type = "classification")
 
 predictions = ml_predict(gbt_model, diabetic_data)
 ml_binary_classification_evaluator(predictions, label_col = "early_readmission")

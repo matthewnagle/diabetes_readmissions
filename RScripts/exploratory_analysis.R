@@ -33,10 +33,15 @@ diabetic_data <- diabetic_data %>%
 diabetic_data <- as.data.frame(unclass(diabetic_data), stringsAsFactors = TRUE)
 
 
-#missing variable
+#missing variable - need to be classified as NA
 diabetic_data %>%
   filter(is.na(weight)) %>%
   sdf_nrow()
+
+diabetic_data %>%
+  group_by(weight) %>%
+  tally() %>%
+  mutate(frac = n / sum(n))
 
 diabetic_data %>%
   filter(is.na(medical_specialty)) %>%

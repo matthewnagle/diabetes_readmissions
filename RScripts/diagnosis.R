@@ -10,7 +10,7 @@ head(diabetic_data)
 diabetic_data <- diabetic_data %>%
   mutate(
     diag_1_cat = case_when(
-      rlike(diag_1, "250") ~ 'diabetes', #case_when work in order
+      rlike(diag_1, "250") ~ 'diabetes', #case_when works in order
       diag_1 >= 000 & diag_1 < 140 ~ 'infection',
       diag_1 >= 140 & diag_1 < 240 ~ 'neoplasms',
       diag_1 >= 240 & diag_1 < 280 ~ 'endo_metabolic_immunity',

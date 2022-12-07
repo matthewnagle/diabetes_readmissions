@@ -151,13 +151,13 @@ lg_results
 #evaluate
 lg_model_metrics = ml_evaluate(lg_model, diabetic_data)
 lg_model_metrics
-lg_model_metrics$area_under_roc() 
+lg_model_metrics$area_under_roc()
 
 lg_model_metrics$true_positive_rate_by_label()
 lg_model_metrics$false_positive_rate_by_label()
 lg_model_metrics$accuracy()
 lg_model_metrics$precision_by_label()
-lg_model_metrics$aic()
+lg_model_metrics$roc()
 
 #geradient boosted trees
 #ran without error 

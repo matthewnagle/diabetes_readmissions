@@ -77,7 +77,7 @@ diabetic_data <- diabetic_data %>%
       TRUE ~ diag_3)
   )
 
-#one_hot_encode diagnosis 1
+#one_hot_encode diagnosis 
 diabetic_data <- diabetic_data %>%
   mutate(
     diag_1_infection = ifelse(diag_1_cat == 'infection', 1,0),
@@ -98,11 +98,7 @@ diabetic_data <- diabetic_data %>%
     diag_1_ill_defined = ifelse(diag_1_cat == 'ill_defined', 1,0),
     diag_1_injury_poisoning = ifelse(diag_1_cat == 'injury_poisoning', 1,0),
     diag_1_supplementary = ifelse(diag_1_cat == 'supplementary', 1,0),
-    diag_1_diabetes = ifelse(diag_1_cat == 'diabetes', 1,0))
-
-#one_hot_encode diagnosis 2
-diabetic_data <- diabetic_data %>%
-  mutate(
+    diag_1_diabetes = ifelse(diag_1_cat == 'diabetes', 1,0),
     diag_2_infection = ifelse(diag_2_cat == 'infection', 1,0),
     diag_2_neoplasms = ifelse(diag_2_cat == 'neoplasms', 1,0),
     diag_2_endo_metabolic_immunity = ifelse(diag_2_cat == 'endo_metabolic_immunity', 1,0),
@@ -121,11 +117,7 @@ diabetic_data <- diabetic_data %>%
     diag_2_ill_defined = ifelse(diag_2_cat == 'ill_defined', 1,0),
     diag_2_injury_poisoning = ifelse(diag_2_cat == 'injury_poisoning', 1,0),
     diag_2_supplementary = ifelse(diag_2_cat == 'supplementary', 1,0),
-    diag_2_diabetes = ifelse(diag_2_cat == 'diabetes', 1,0))
-
-#one_hot_encode diagnosis 3
-diabetic_data <- diabetic_data %>%
-  mutate(
+    diag_2_diabetes = ifelse(diag_2_cat == 'diabetes', 1,0),
     diag_3_infection = ifelse(diag_3_cat == 'infection', 1,0),
     diag_3_neoplasms = ifelse(diag_3_cat == 'neoplasms', 1,0),
     diag_3_endo_metabolic_immunity = ifelse(diag_3_cat == 'endo_metabolic_immunity', 1,0),

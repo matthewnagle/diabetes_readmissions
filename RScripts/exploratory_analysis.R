@@ -151,6 +151,12 @@ diabetic_data %>%
 diabetic_data %>%
   summarise(count = n_distinct(diag_2))
 
+n_tertiary_dx <- diabetic_data %>%
+  summarise(count = n_distinct(diag_3)) %>%
+  collect()
+
+print(paste('etst',n_tertiary_dx))
+
 ## STATISTICAL ASSOCIATION
 
 #creating a contingency table

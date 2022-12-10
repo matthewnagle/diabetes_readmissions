@@ -1,13 +1,13 @@
 ----------------------------------------------------------------
-Sat Dec 10 09:05:23 GMT 2022:
-Booting Derby version The Apache Software Foundation - Apache Derby - 10.12.1.1 - (1704137): instance a816c00e-0184-fb48-3242-000009a9f8d0 
-on database directory memory:/Users/matt/Desktop/Dropbox/Home/College/Edinburgh - MSc Data Science/Big Data Analytics/diabetes_readmissions/RScripts/databaseName=metastore_db with class loader org.apache.spark.sql.hive.client.IsolatedClientLoader$$anon$1@3926c362 
-Loaded from file:/Users/matt/spark/spark-2.4.3-bin-hadoop2.7/jars/derby-10.12.1.1.jar
+Sat Dec 10 18:42:35 UTC 2022:
+Booting Derby version The Apache Software Foundation - Apache Derby - 10.14.2.0 - (1828579): instance a816c00e-0184-fd58-a377-0000020d4810 
+on database directory memory:/home/jovyan/Matt/diabetes_readmissions/RScripts/databaseName=metastore_db with class loader jdk.internal.loader.ClassLoaders$AppClassLoader@5c29bfd 
+Loaded from file:/home/jovyan/spark/spark-3.2.3-bin-hadoop3.2/jars/derby-10.14.2.0.jar
 java.vendor=Oracle Corporation
-java.runtime.version=1.8.0_351-b10
-user.dir=/Users/matt/Desktop/Dropbox/Home/College/Edinburgh - MSc Data Science/Big Data Analytics/diabetes_readmissions/RScripts
-os.name=Mac OS X
-os.arch=x86_64
-os.version=11.6
+java.runtime.version=11.0.1-internal+0-adhoc..src
+user.dir=/home/jovyan/Matt/diabetes_readmissions/RScripts
+os.name=Linux
+os.arch=amd64
+os.version=5.4.224-1.el7.elrepo.x86_64
 derby.system.home=null
 Database Class Loader started - derby.database.classpath=''

@@ -15,8 +15,9 @@ diabetic_data <- diabetic_data %>%
     z_number_diagnoses = (number_diagnoses - mean(number_diagnoses, na.rm = TRUE)) / sd(number_diagnoses, na.rm = TRUE)
   )
 
-#z-score partitioned training dataset
-diabetic_data_partitions$diabetic_data_training <- diabetic_data_partitions$diabetic_data_training %>%
+
+#z-score partitioned test dataset
+diabetic_data_partitions$diabetic_data_test <- diabetic_data_partitions$diabetic_data_test %>%
   mutate(
     z_age_contin = (age_contin - mean(age_contin, na.rm = TRUE)) / sd(age_contin, na.rm = TRUE),
     z_time_in_hospital = (time_in_hospital - mean(time_in_hospital, na.rm = TRUE)) / sd(time_in_hospital, na.rm = TRUE),

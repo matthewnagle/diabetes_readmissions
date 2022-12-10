@@ -1,7 +1,9 @@
 list_of_medical_specialty <- diabetic_data %>%
   group_by(medical_specialty) %>%
   tally() %>%
-  mutate(frac = n / sum(n)) %>%
+  mutate(percent = ((n / sum(n))*100)) %>%
+  mutate(percent = round(percent, 2)) %>%
+  arrange(desc(n)) %>%
   collect()
 
 glimpse(list_of_medical_specialty)
@@ -84,6 +86,89 @@ diabetic_data <- diabetic_data %>%
     Perinatology = ifelse(medical_specialty == 'Perinatology', 1,0),
     DCPTEAM = ifelse(medical_specialty == 'DCPTEAM', 1,0),
     medical_specialty_unkown = ifelse(medical_specialty == '?', 1,0))
+
+
+diabetic_data %>%
+  group_by(Cardiology) %>%
+  tally()
+
+
+#one_hot_encode diagnosis 1
+diabetic_data <- diabetic_data %>%
+  mutate(
+    Cardiology = ifelse(medical_specialty == 'Cardiology' & !is.na(medical_specialty), 1,0),
+    ObstetricsandGynecology = ifelse(medical_specialty == 'ObstetricsandGynecology' & !is.na(medical_specialty), 1,0),
+    Pediatrics = ifelse(medical_specialty == 'Pediatrics' & !is.na(medical_specialty), 1,0),
+    SurgeryColonRectal = ifelse(medical_specialty == 'Surgery-Colon&Rectal' & !is.na(medical_specialty), 1,0),
+    PediatricsCriticalCare = ifelse(medical_specialty == 'Pediatrics-CriticalCare' & !is.na(medical_specialty), 1,0),
+    Anesthesiology_Pediatric = ifelse(medical_specialty == 'Anesthesiology-Pediatric' & !is.na(medical_specialty), 1,0),
+    Ophthalmology = ifelse(medical_specialty == 'Ophthalmology' & !is.na(medical_specialty), 1,0),
+    InfectiousDiseases = ifelse(medical_specialty == 'InfectiousDiseases' & !is.na(medical_specialty), 1,0),
+    SurgeryMaxillofacial = ifelse(medical_specialty == 'Surgery-Maxillofacial' & !is.na(medical_specialty), 1,0),
+    PsychiatryAddictive = ifelse(medical_specialty == 'Psychiatry-Addictive' & !is.na(medical_specialty), 1,0),
+    SurgeryCardiovascular = ifelse(medical_specialty == 'Surgery-Cardiovascular' & !is.na(medical_specialty), 1,0),
+    Speech = ifelse(medical_specialty == 'Speech' & !is.na(medical_specialty), 1,0),
+    Endocrinology_Metabolism = ifelse(medical_specialty == 'Endocrinology-Metabolism' & !is.na(medical_specialty), 1,0),
+    FamilyGeneralPractice = ifelse(medical_specialty == 'Family/GeneralPractice' & !is.na(medical_specialty), 1,0),
+    SurgeryGeneral = ifelse(medical_specialty == 'Surgery-General' & !is.na(medical_specialty), 1,0),
+    Orthopedics = ifelse(medical_specialty == 'Orthopedics' & !is.na(medical_specialty), 1,0),
+    EmergencyTrauma = ifelse(medical_specialty == 'Emergency/Trauma' & !is.na(medical_specialty), 1,0),
+    HematologyOncology = ifelse(medical_specialty == 'Hematology/Oncology' & !is.na(medical_specialty), 1,0),
+    Otolaryngology = ifelse(medical_specialty == 'Otolaryngology' & !is.na(medical_specialty), 1,0),
+    Oncology = ifelse(medical_specialty == 'Oncology' & !is.na(medical_specialty), 1,0),
+    SurgeryPediatric = ifelse(medical_specialty == 'Surgery-Pediatric' & !is.na(medical_specialty), 1,0),
+    PediatricsEmergencyMedicine = ifelse(medical_specialty == 'Pediatrics-EmergencyMedicine' & !is.na(medical_specialty), 1,0),
+    AllergyandImmunology = ifelse(medical_specialty == 'AllergyandImmunology' & !is.na(medical_specialty), 1,0),
+    PediatricsInfectiousDiseases = ifelse(medical_specialty == 'Pediatrics-InfectiousDiseases' & !is.na(medical_specialty), 1,0),
+    Osteopath = ifelse(medical_specialty == 'Osteopath' & !is.na(medical_specialty), 1,0),
+    SurgicalSpecialty = ifelse(medical_specialty == 'SurgicalSpecialty' & !is.na(medical_specialty), 1,0),
+    Dermatology = ifelse(medical_specialty == 'Dermatology' & !is.na(medical_specialty), 1,0),
+    SportsMedicine = ifelse(medical_specialty == 'SportsMedicine' & !is.na(medical_specialty), 1,0),
+    Resident = ifelse(medical_specialty == 'Resident' & !is.na(medical_specialty), 1,0),
+    InternalMedicine = ifelse(medical_specialty == 'InternalMedicine' & !is.na(medical_specialty), 1,0),
+    Gastroenterology = ifelse(medical_specialty == 'Gastroenterology' & !is.na(medical_specialty), 1,0),
+    SurgeryCardiovascularThoracic = ifelse(medical_specialty == 'Surgery-Cardiovascular/Thoracic' & !is.na(medical_specialty), 1,0),
+    Nephrology = ifelse(medical_specialty == 'Nephrology' & !is.na(medical_specialty), 1,0),
+    OrthopedicsReconstructive = ifelse(medical_specialty == 'Orthopedics-Reconstructive'& !is.na(medical_specialty), 1,0),
+    ObstericsGynecologyGynecologicOnco = ifelse(medical_specialty == 'Obsterics&Gynecology-GynecologicOnco' & !is.na(medical_specialty), 1,0),
+    Endocrinology = ifelse(medical_specialty == 'Endocrinology' & !is.na(medical_specialty), 1,0),
+    Pediatrics_Pulmonology = ifelse(medical_specialty == 'Pediatrics-Pulmonology' & !is.na(medical_specialty), 1,0),
+    Neurology = ifelse(medical_specialty == 'Neurology' & !is.na(medical_specialty), 1,0),
+    Psychology = ifelse(medical_specialty == 'Psychology' & !is.na(medical_specialty), 1,0),
+    Podiatry = ifelse(medical_specialty == 'Podiatry' & !is.na(medical_specialty), 1,0),
+    Gynecology = ifelse(medical_specialty == 'Gynecology' & !is.na(medical_specialty), 1,0),
+    SurgeryPlastic = ifelse(medical_specialty == 'Surgery-Plastic' & !is.na(medical_specialty), 1,0),
+    SurgeryThoracic = ifelse(medical_specialty == 'Surgery-Thoracic' & !is.na(medical_specialty), 1,0),
+    SurgeryPlasticwithinHeadandNeck = ifelse(medical_specialty == 'Surgery-PlasticwithinHeadandNeck' & !is.na(medical_specialty), 1,0),
+    PhysicalMedicineandRehabilitation = ifelse(medical_specialty == 'PhysicalMedicineandRehabilitation' & !is.na(medical_specialty), 1,0),
+    Rheumatology = ifelse(medical_specialty == 'Rheumatology' & !is.na(medical_specialty), 1,0),
+    PediatricsAllergyandImmunology = ifelse(medical_specialty == 'Pediatrics-AllergyandImmunology' & !is.na(medical_specialty), 1,0),
+    Surgeon = ifelse(medical_specialty == 'Surgeon' & !is.na(medical_specialty), 1,0),
+    SurgeryVascular = ifelse(medical_specialty == 'Surgery-Vascular' & !is.na(medical_specialty), 1,0),
+    Pathology = ifelse(medical_specialty == 'Pathology' & !is.na(medical_specialty), 1,0),
+    Hospitalist = ifelse(medical_specialty == 'Hospitalist'& !is.na(medical_specialty), 1,0),
+    OutreachServices = ifelse(medical_specialty == 'OutreachServices' & !is.na(medical_specialty), 1,0),
+    CardiologyPediatric = ifelse(medical_specialty == 'Cardiology-Pediatric'& !is.na(medical_specialty), 1,0),
+    Neurophysiology = ifelse(medical_specialty == 'Neurophysiology' & !is.na(medical_specialty), 1,0),
+    PediatricsEndocrinology = ifelse(medical_specialty == 'Pediatrics-Endocrinology'& !is.na(medical_specialty), 1,0),
+    Psychiatry = ifelse(medical_specialty == 'Psychiatry'& !is.na(medical_specialty), 1,0),
+    Pulmonology = ifelse(medical_specialty == 'Pulmonology'& !is.na(medical_specialty), 1,0),
+    SurgeryNeuro = ifelse(medical_specialty == 'Surgery-Neuro'& !is.na(medical_specialty), 1,0),
+    Urology = ifelse(medical_specialty == 'Urology'& !is.na(medical_specialty), 1,0),
+    PsychiatryChildAdolescent = ifelse(medical_specialty == 'Psychiatry-Child/Adolescent'& !is.na(medical_specialty), 1,0),
+    Radiology = ifelse(medical_specialty == 'Radiology'& !is.na(medical_specialty), 1,0),
+    PediatricsHematologyOncology = ifelse(medical_specialty == 'Pediatrics-Hematology-Oncology'& !is.na(medical_specialty), 1,0),
+    PediatricsNeurology = ifelse(medical_specialty == 'Pediatrics-Neurology'& !is.na(medical_specialty), 1,0),
+    Anesthesiology = ifelse(medical_specialty == 'Anesthesiology'& !is.na(medical_specialty), 1,0),
+    Dentistry = ifelse(medical_specialty == 'Dentistry'& !is.na(medical_specialty), 1,0),
+    PhysicianNotFound = ifelse(medical_specialty == 'PhysicianNotFound'& !is.na(medical_specialty), 1,0),
+    Hematology = ifelse(medical_specialty == 'Hematology'& !is.na(medical_specialty), 1,0),
+    Proctology = ifelse(medical_specialty == 'Proctology'& !is.na(medical_specialty), 1,0),
+    Obstetrics = ifelse(medical_specialty == 'Obstetrics'& !is.na(medical_specialty), 1,0),
+    Radiologist = ifelse(medical_specialty == 'Radiologist'& !is.na(medical_specialty), 1,0),
+    Perinatology = ifelse(medical_specialty == 'Perinatology'& !is.na(medical_specialty), 1,0),
+    DCPTEAM = ifelse(medical_specialty == 'DCPTEAM' & !is.na(medical_specialty), 1,0),
+    medical_specialty_unkown = ifelse(is.na(medical_specialty), 1,0))
 
 
 Cardiology +

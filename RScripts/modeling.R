@@ -254,6 +254,7 @@ gbt_model = ml_gradient_boosted_trees(diabetic_data, early_readmission ~
                                         diag_1_injury_poisoning +
                                         diag_1_supplementary +
                                         diag_1_diabetes +
+                                        diag_2_unknown +
                                         diag_2_infection +
                                         diag_2_neoplasms +
                                         diag_2_endo_metabolic_immunity +
@@ -273,6 +274,7 @@ gbt_model = ml_gradient_boosted_trees(diabetic_data, early_readmission ~
                                         diag_2_injury_poisoning +
                                         diag_2_supplementary +
                                         diag_2_diabetes +
+                                        diag_2_unknown +
                                         diag_3_infection +
                                         diag_3_neoplasms +
                                         diag_3_endo_metabolic_immunity +
@@ -292,6 +294,7 @@ gbt_model = ml_gradient_boosted_trees(diabetic_data, early_readmission ~
                                         diag_3_injury_poisoning +
                                         diag_3_supplementary +
                                         diag_3_diabetes +
+                                        diag_3_unknown +
                                         home +
                                         healthcare_facility +
                                         home_with_help +

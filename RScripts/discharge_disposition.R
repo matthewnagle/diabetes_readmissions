@@ -1,19 +1,22 @@
 glimpse(diabetic_data)
 
+diabetic_data %>%
+  group_by(discharge_disposition_consolidated) %>%
+  tally()
+
 diabetic_data <- diabetic_data %>%
   mutate(
     discharge_disposition_consolidated = case_when(
       discharge_disposition_id %in% c(1) ~ 'home',
       discharge_disposition_id %in% c(2,3,4,5,10,22,23,24,30,27,28,29) ~ 'healthcare_facility',
       discharge_disposition_id %in%c(6,8) ~ 'home_with_help',
-      discharge_disposition_id %in% c(6,8) ~ 'AMA',
+      discharge_disposition_id %in% c(7) ~ 'AMA',
       discharge_disposition_id %in% c(9) ~ 'admitted',
       discharge_disposition_id %in% c(11,13,14,15,19,20,21) ~ 'hospice_expired',
-      discharge_disposition_id %in% c(12,16,27) ~ 'outpatient',
+      discharge_disposition_id %in% c(12,16,17) ~ 'outpatient',
       discharge_disposition_id %in% c(18,25,26) ~ 'unknown_discharge_disposition',
       is.na(discharge_disposition_id) ~ 'unknown_discharge_disposition', #NA variables do not get special treatment
       TRUE ~ discharge_disposition_id))
-
 
 #one_hot_encode discharge_disposition_consolidated
 diabetic_data <- diabetic_data %>%

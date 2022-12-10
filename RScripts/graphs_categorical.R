@@ -20,6 +20,10 @@ gender_group = diabetic_data %>%
   arrange(gender) %>%
   collect()
 
+discharge_disposition_group = diabetic_data %>% 
+  count(discharge_disposition_consolidated) %>%
+  arrange(discharge_disposition_consolidated) %>%
+  collect()
 
 
 # Now use ggplot on the R dataframe age_group
@@ -45,6 +49,14 @@ gender_plot <-
   xlab('Gender') +
   ylab('Count')
 #coord_flip()
+
+discharge_disposition_plot <-
+  ggplot(aes(as.factor(discharge_disposition_consolidated), n), data = discharge_disposition_group) +
+  geom_col(fill = 'SteelBlue') +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  xlab('Discharge disposition') +
+  ylab('Count')
+
 
 
 plot_grid(age_plot, race_plot, gender_plot)

@@ -18,7 +18,10 @@ summary_stats_num_var <- sdf_describe(diabetic_data, cols =
                  'number_diagnoses',
                  'num_procedures',
                  'number_emergency'))
-kable(summary_stats_num_var)
+kable(summary_stats_num_var) %>%
+  kable_styling(latex_options = "scale_down")
+
+#kable_styling() from the kable_extra package: kable_styling(latex_options = "scale_down")
 
 #create summary groups to collect and use in ggplot
 time_in_hospital_group = diabetic_data %>% 

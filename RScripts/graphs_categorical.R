@@ -1,7 +1,8 @@
 ##PLOTS
-
+glimpse(diabetic_data)
 dbplot_histogram(diabetic_data, age_contin)
 
+library(cowplot)
 
 # Data manipulations are done first using spark
 age_group = diabetic_data %>% 
@@ -14,23 +15,36 @@ race_group = diabetic_data %>%
   arrange(race) %>%
   collect()
 
+gender_group = diabetic_data %>% 
+  count(gender) %>%
+  arrange(gender) %>%
+  collect()
+
 
 
 # Now use ggplot on the R dataframe age_group
 age_plot <- 
   ggplot(aes(as.factor(age), n), data = age_group) +
   geom_col(fill = 'SteelBlue') +
-  xlab('Count') +
-  ylab('Age group')
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  xlab('Age group') +
+  ylab('Count')
 #coord_flip()
 
 race_plot <-
   ggplot(aes(as.factor(race), n), data = race_group) +
   geom_col(fill = 'SteelBlue') +
-  xlab('Count') +
-  ylab('Race')
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  xlab('Race') +
+  ylab('Count')
 #coord_flip()
 
-library(cowplot)
+gender_plot <-
+  ggplot(aes(as.factor(gender), n), data = gender_group) +
+  geom_col(fill = 'SteelBlue') +
+  xlab('Gender') +
+  ylab('Count')
+#coord_flip()
 
-plot_grid(age_plot, race_plot)
+
+plot_grid(age_plot, race_plot, gender_plot)

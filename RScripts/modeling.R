@@ -403,3 +403,10 @@ gbt_model = ml_gradient_boosted_trees(diabetic_data, early_readmission ~
 
 predictions = ml_predict(gbt_model, diabetic_data)
 ml_binary_classification_evaluator(predictions, label_col = "early_readmission")
+
+#GBTClassifier currently only supports binary classification
+
+featureImport <- ml_tree_feature_importance(gbt_model)
+featureImport[1:10,] %>% ggplot(aes(reorder(feature, importance),importance,fill=feature)) + 
+  geom_bar(stat = "identity") + coord_flip() + ggtitle("Top 10 feature importance") + 
+  theme(legend.position="none") + ylab("importance") + xlab("feature")

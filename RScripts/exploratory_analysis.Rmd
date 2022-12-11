@@ -780,6 +780,7 @@ diabetic_data <- diabetic_data %>%
       TRUE ~ discharge_disposition_id))
 ```
 
+
 ### Graphing of consolidated discharge dispositions
 ```{r, tidy=TRUE, tidy.opts=list(width.cutoff=50)}
 discharge_disposition_group = diabetic_data %>% 
@@ -795,6 +796,13 @@ discharge_disposition_plot <-
   ylab('Count')
 
 discharge_disposition_plot
+```
+
+### Removal of patients with `hospice_expired` discharge disposition
+It is likely that discharge destination could bias the model as certain destinations such as ‘hospice’, ‘expired’ will unlikely result in short-term readmission irrespective of the true predictive value of the other variables. An effective model will therefore have to account for this bias by removing patient whho had this discharge disposition.
+```{r}
+diabetic_data <- diabetic_data %>%
+  filter(discharge_disposition_consolidated!='hospice_expired')
 ```
 
 ### One hot encoding of `discharge_disposition_consolidated`
@@ -839,13 +847,16 @@ Importantly this is done before creating the z-scores for the respective numeric
 ```{r}
 diabetic_data_partitions <- diabetic_data %>%
   sdf_random_split(diabetic_data_training = 0.3, diabetic_data_test = 0.7, seed = 1099)
+
+diabetic_data_training <- diabetic_data_partitions$diabetic_data_training
+diabetic_data_test <- diabetic_data_partitions$diabetic_data_test
 ```
 
 # Z-scoring numerical variables
 The z-scores for the training and test dataset are calculated independently 
 ```{r, tidy=TRUE, tidy.opts=list(width.cutoff=50)}
 #z-score partitioned training dataset
-diabetic_data_partitions$diabetic_data_training <- diabetic_data_partitions$diabetic_data_training %>%
+diabetic_data_training <- diabetic_data_training %>%
   mutate(
     z_age_contin = (age_contin - mean(age_contin, na.rm = TRUE)) / sd(age_contin, na.rm = TRUE),
     z_time_in_hospital = (time_in_hospital - mean(time_in_hospital, na.rm = TRUE)) / sd(time_in_hospital, na.rm = TRUE),
@@ -858,7 +869,7 @@ diabetic_data_partitions$diabetic_data_training <- diabetic_data_partitions$diab
   )
 
 #z-score partitioned test dataset
-diabetic_data_partitions$diabetic_data_test <- diabetic_data_partitions$diabetic_data_test %>%
+diabetic_data_test <- diabetic_data_test %>%
   mutate(
     z_age_contin = (age_contin - mean(age_contin, na.rm = TRUE)) / sd(age_contin, na.rm = TRUE),
     z_time_in_hospital = (time_in_hospital - mean(time_in_hospital, na.rm = TRUE)) / sd(time_in_hospital, na.rm = TRUE),
@@ -872,9 +883,9 @@ diabetic_data_partitions$diabetic_data_test <- diabetic_data_partitions$diabetic
 ```
 
 # Machine learning modelling
-## Gradient boosted trees
+## Logistic regression
 ```{r, tidy=TRUE, tidy.opts=list(width.cutoff=50)}
-gbt_model = ml_gradient_boosted_trees(diabetic_data_partitions$diabetic_data_training, early_readmission ~
+lg_model = ml_logistic_regression(diabetic_data_training, early_readmission ~
                                         diag_1_infection +
                                         diag_1_neoplasms +
                                         diag_1_endo_metabolic_immunity +
@@ -940,7 +951,180 @@ gbt_model = ml_gradient_boosted_trees(diabetic_data_partitions$diabetic_data_tra
                                         home_with_help +
                                         AMA +
                                         admitted +
-                                        hospice_expired +
+                                        outpatient +
+                                        unknown_discharge_disposition +
+                                        asian +
+                                        african_american +
+                                        caucasian +
+                                        hispanic +
+                                        unknown_race +
+                                        emergency +
+                                        urgent +
+                                        elective +
+                                        admisison_type_other +
+                                        max_glu_serum_none +
+                                        max_glu_serum_norm +
+                                        max_glu_serum_300 +
+                                        max_glu_serum_200 +
+                                        A1Cresult_none +
+                                        A1Cresult_norm +
+                                        A1Cresult_7 +
+                                        A1Cresult_8 +
+                                        z_age_contin +
+                                        z_time_in_hospital +
+                                        z_num_lab_procedures +
+                                        z_num_procedures +
+                                        z_number_outpatient +
+                                        z_number_emergency +
+                                        z_number_inpatient +
+                                        z_number_diagnoses +
+                                        Cardiology +
+                                        ObstetricsandGynecology +
+                                        Pediatrics +
+                                        SurgeryColonRectal +
+                                        PediatricsCriticalCare +
+                                        Anesthesiology_Pediatric +
+                                        Ophthalmology +
+                                        InfectiousDiseases +
+                                        SurgeryMaxillofacial +
+                                        PsychiatryAddictive +
+                                        SurgeryCardiovascular +
+                                        Speech +
+                                        Endocrinology_Metabolism +
+                                        FamilyGeneralPractice +
+                                        SurgeryGeneral +
+                                        Orthopedics +
+                                        EmergencyTrauma +
+                                        HematologyOncology +
+                                        Otolaryngology +
+                                        Oncology +
+                                        SurgeryPediatric +
+                                        PediatricsEmergencyMedicine +
+                                        AllergyandImmunology +
+                                        PediatricsInfectiousDiseases +
+                                        Osteopath +
+                                        SurgicalSpecialty +
+                                        Dermatology +
+                                        SportsMedicine +
+                                        Resident +
+                                        InternalMedicine +
+                                        Gastroenterology +
+                                        SurgeryCardiovascularThoracic +
+                                        Nephrology +
+                                        OrthopedicsReconstructive +
+                                        ObstericsGynecologyGynecologicOnco +
+                                        Endocrinology +
+                                        Pediatrics_Pulmonology +
+                                        Neurology +
+                                        Psychology +
+                                        Podiatry +
+                                        Gynecology +
+                                        SurgeryPlastic +
+                                        SurgeryThoracic +
+                                        SurgeryPlasticwithinHeadandNeck +
+                                        PhysicalMedicineandRehabilitation +
+                                        Rheumatology +
+                                        PediatricsAllergyandImmunology +
+                                        Surgeon +
+                                        SurgeryVascular +
+                                        Pathology +
+                                        Hospitalist +
+                                        OutreachServices +
+                                        CardiologyPediatric +
+                                        Neurophysiology +
+                                        PediatricsEndocrinology +
+                                        Psychiatry +
+                                        Pulmonology +
+                                        SurgeryNeuro +
+                                        Urology +
+                                        PsychiatryChildAdolescent +
+                                        Radiology +
+                                        PediatricsHematologyOncology +
+                                        PediatricsNeurology +
+                                        Anesthesiology +
+                                        Dentistry +
+                                        PhysicianNotFound +
+                                        Hematology +
+                                        Proctology +
+                                        Obstetrics +
+                                        Radiologist +
+                                        Perinatology +
+                                        DCPTEAM +
+                                        medical_specialty_unkown +
+                                        change +
+                                        diabetesMed,
+                                  fit_intercept = FALSE,
+                                  family = "binomial")
+```
+
+## Gradient boosted trees
+```{r, tidy=TRUE, tidy.opts=list(width.cutoff=50)}
+gbt_model = ml_gradient_boosted_trees(diabetic_data_training, early_readmission ~
+                                        diag_1_infection +
+                                        diag_1_neoplasms +
+                                        diag_1_endo_metabolic_immunity +
+                                        diag_1_haematology +
+                                        diag_1_mental +
+                                        diag_1_neurology +
+                                        diag_1_circulatory +
+                                        diag_1_respiratory +
+                                        diag_1_digestive +
+                                        diag_1_genitourinary +
+                                        diag_1_preg_birth_puerperium +
+                                        diag_1_dermatology +
+                                        diag_1_musculoskeletal +
+                                        diag_1_congenital +
+                                        diag_1_perinatal +
+                                        diag_1_ill_defined +
+                                        diag_1_injury_poisoning +
+                                        diag_1_supplementary +
+                                        diag_1_diabetes +
+                                        diag_2_unknown +
+                                        diag_2_infection +
+                                        diag_2_neoplasms +
+                                        diag_2_endo_metabolic_immunity +
+                                        diag_2_haematology +
+                                        diag_2_mental +
+                                        diag_2_neurology +
+                                        diag_2_circulatory +
+                                        diag_2_respiratory +
+                                        diag_2_digestive +
+                                        diag_2_genitourinary +
+                                        diag_2_preg_birth_puerperium +
+                                        diag_2_dermatology +
+                                        diag_2_musculoskeletal +
+                                        diag_2_congenital +
+                                        diag_2_perinatal +
+                                        diag_2_ill_defined +
+                                        diag_2_injury_poisoning +
+                                        diag_2_supplementary +
+                                        diag_2_diabetes +
+                                        diag_2_unknown +
+                                        diag_3_infection +
+                                        diag_3_neoplasms +
+                                        diag_3_endo_metabolic_immunity +
+                                        diag_3_haematology +
+                                        diag_3_mental +
+                                        diag_3_neurology +
+                                        diag_3_circulatory +
+                                        diag_3_respiratory +
+                                        diag_3_digestive +
+                                        diag_3_genitourinary +
+                                        diag_3_preg_birth_puerperium +
+                                        diag_3_dermatology +
+                                        diag_3_musculoskeletal +
+                                        diag_3_congenital +
+                                        diag_3_perinatal +
+                                        diag_3_ill_defined +
+                                        diag_3_injury_poisoning +
+                                        diag_3_supplementary +
+                                        diag_3_diabetes +
+                                        diag_3_unknown +
+                                        home +
+                                        healthcare_facility +
+                                        home_with_help +
+                                        AMA +
+                                        admitted +
                                         outpatient +
                                         unknown_discharge_disposition +
                                         asian +
@@ -1046,24 +1230,220 @@ gbt_model = ml_gradient_boosted_trees(diabetic_data_partitions$diabetic_data_tra
                                     type = "classification")
 ```
 
-Testing model on training data
+## Multilayer perceptron
 ```{r, tidy=TRUE, tidy.opts=list(width.cutoff=50)}
-predictions = ml_predict(gbt_model, diabetic_data_partitions$diabetic_data_training)
-ml_binary_classification_evaluator(predictions, label_col = "early_readmission")
-
-diabetic_data_partitions$diabetic_data_test
+mlp_model = ml_multilayer_perceptron_classifier(diabetic_data_training, early_readmission ~
+                                        diag_1_infection +
+                                        diag_1_neoplasms +
+                                        diag_1_endo_metabolic_immunity +
+                                        diag_1_haematology +
+                                        diag_1_mental +
+                                        diag_1_neurology +
+                                        diag_1_circulatory +
+                                        diag_1_respiratory +
+                                        diag_1_digestive +
+                                        diag_1_genitourinary +
+                                        diag_1_preg_birth_puerperium +
+                                        diag_1_dermatology +
+                                        diag_1_musculoskeletal +
+                                        diag_1_congenital +
+                                        diag_1_perinatal +
+                                        diag_1_ill_defined +
+                                        diag_1_injury_poisoning +
+                                        diag_1_supplementary +
+                                        diag_1_diabetes +
+                                        diag_2_unknown +
+                                        diag_2_infection +
+                                        diag_2_neoplasms +
+                                        diag_2_endo_metabolic_immunity +
+                                        diag_2_haematology +
+                                        diag_2_mental +
+                                        diag_2_neurology +
+                                        diag_2_circulatory +
+                                        diag_2_respiratory +
+                                        diag_2_digestive +
+                                        diag_2_genitourinary +
+                                        diag_2_preg_birth_puerperium +
+                                        diag_2_dermatology +
+                                        diag_2_musculoskeletal +
+                                        diag_2_congenital +
+                                        diag_2_perinatal +
+                                        diag_2_ill_defined +
+                                        diag_2_injury_poisoning +
+                                        diag_2_supplementary +
+                                        diag_2_diabetes +
+                                        diag_2_unknown +
+                                        diag_3_infection +
+                                        diag_3_neoplasms +
+                                        diag_3_endo_metabolic_immunity +
+                                        diag_3_haematology +
+                                        diag_3_mental +
+                                        diag_3_neurology +
+                                        diag_3_circulatory +
+                                        diag_3_respiratory +
+                                        diag_3_digestive +
+                                        diag_3_genitourinary +
+                                        diag_3_preg_birth_puerperium +
+                                        diag_3_dermatology +
+                                        diag_3_musculoskeletal +
+                                        diag_3_congenital +
+                                        diag_3_perinatal +
+                                        diag_3_ill_defined +
+                                        diag_3_injury_poisoning +
+                                        diag_3_supplementary +
+                                        diag_3_diabetes +
+                                        diag_3_unknown +
+                                        home +
+                                        healthcare_facility +
+                                        home_with_help +
+                                        AMA +
+                                        admitted +
+                                        outpatient +
+                                        unknown_discharge_disposition +
+                                        asian +
+                                        african_american +
+                                        caucasian +
+                                        hispanic +
+                                        unknown_race +
+                                        emergency +
+                                        urgent +
+                                        elective +
+                                        admisison_type_other +
+                                        max_glu_serum_none +
+                                        max_glu_serum_norm +
+                                        max_glu_serum_300 +
+                                        max_glu_serum_200 +
+                                        A1Cresult_none +
+                                        A1Cresult_norm +
+                                        A1Cresult_7 +
+                                        A1Cresult_8 +
+                                        z_age_contin +
+                                        z_time_in_hospital +
+                                        z_num_lab_procedures +
+                                        z_num_procedures +
+                                        z_number_outpatient +
+                                        z_number_emergency +
+                                        z_number_inpatient +
+                                        z_number_diagnoses +
+                                        Cardiology +
+                                        ObstetricsandGynecology +
+                                        Pediatrics +
+                                        SurgeryColonRectal +
+                                        PediatricsCriticalCare +
+                                        Anesthesiology_Pediatric +
+                                        Ophthalmology +
+                                        InfectiousDiseases +
+                                        SurgeryMaxillofacial +
+                                        PsychiatryAddictive +
+                                        SurgeryCardiovascular +
+                                        Speech +
+                                        Endocrinology_Metabolism +
+                                        FamilyGeneralPractice +
+                                        SurgeryGeneral +
+                                        Orthopedics +
+                                        EmergencyTrauma +
+                                        HematologyOncology +
+                                        Otolaryngology +
+                                        Oncology +
+                                        SurgeryPediatric +
+                                        PediatricsEmergencyMedicine +
+                                        AllergyandImmunology +
+                                        PediatricsInfectiousDiseases +
+                                        Osteopath +
+                                        SurgicalSpecialty +
+                                        Dermatology +
+                                        SportsMedicine +
+                                        Resident +
+                                        InternalMedicine +
+                                        Gastroenterology +
+                                        SurgeryCardiovascularThoracic +
+                                        Nephrology +
+                                        OrthopedicsReconstructive +
+                                        ObstericsGynecologyGynecologicOnco +
+                                        Endocrinology +
+                                        Pediatrics_Pulmonology +
+                                        Neurology +
+                                        Psychology +
+                                        Podiatry +
+                                        Gynecology +
+                                        SurgeryPlastic +
+                                        SurgeryThoracic +
+                                        SurgeryPlasticwithinHeadandNeck +
+                                        PhysicalMedicineandRehabilitation +
+                                        Rheumatology +
+                                        PediatricsAllergyandImmunology +
+                                        Surgeon +
+                                        SurgeryVascular +
+                                        Pathology +
+                                        Hospitalist +
+                                        OutreachServices +
+                                        CardiologyPediatric +
+                                        Neurophysiology +
+                                        PediatricsEndocrinology +
+                                        Psychiatry +
+                                        Pulmonology +
+                                        SurgeryNeuro +
+                                        Urology +
+                                        PsychiatryChildAdolescent +
+                                        Radiology +
+                                        PediatricsHematologyOncology +
+                                        PediatricsNeurology +
+                                        Anesthesiology +
+                                        Dentistry +
+                                        PhysicianNotFound +
+                                        Hematology +
+                                        Proctology +
+                                        Obstetrics +
+                                        Radiologist +
+                                        Perinatology +
+                                        DCPTEAM +
+                                        medical_specialty_unkown +
+                                        change +
+                                        diabetesMed,
+                                        layers =c(166, 80, 80, 2))
 ```
 
-Testing model on test data
+## Evaluating models
+### Logistic regression
 ```{r, tidy=TRUE, tidy.opts=list(width.cutoff=50)}
-predictions = ml_predict(gbt_model, diabetic_data_partitions$diabetic_data_test)
-ml_binary_classification_evaluator(predictions, label_col = "early_readmission")
+lg_model_metrics = ml_evaluate(lg_model, diabetic_data_test)
+lg_auc <- lg_model_metrics$area_under_roc()
+```
+
+#### Graph ROC curve for the logistic regression model
+```{r}
+lg_roc <- lg_model_metrics$roc() %>%
+  collect()
+
+ggplot(lg_roc, aes(x = FPR, y = TPR)) +
+  geom_line() + geom_abline(lty = "dashed")
+```
+
+### Gradient boosted trees
+```{r, tidy=TRUE, tidy.opts=list(width.cutoff=50)}
+gbt_predictions = ml_predict(gbt_model, diabetic_data_test)
+gbt_auc <- ml_binary_classification_evaluator(gbt_predictions, label_col = "early_readmission")
 ```
 
 Graphing of feature importance
 ```{r, tidy=TRUE, tidy.opts=list(width.cutoff=50)}
 featureImport <- ml_tree_feature_importance(gbt_model)
 featureImport[1:20,] %>% ggplot(aes(reorder(feature, importance),importance,fill=feature)) + 
-  geom_bar(stat = "identity") + coord_flip() + ggtitle("Top 20 feature importance") + 
+  geom_bar(stat = "identity") + coord_flip() + ggtitle("Top 20 - feature importance") + 
   theme(legend.position="none") + ylab("importance") + xlab("feature")
+```
+
+### Multilayer perceptron classifier
+```{r, tidy=TRUE, tidy.opts=list(width.cutoff=50)}
+mlp_predictions = ml_predict(mlp_model, diabetic_data_test)
+mlp_auc <- ml_binary_classification_evaluator(mlp_predictions, label_col = "early_readmission")
+```
+
+## Compare models
+```{r}
+auc <- data.frame( AUC = c(lg_auc, gbt_auc, mlp_auc))
+row.names(auc) <- c("Logisitic Regression", "Gradient Boosted Trees", "Multilayer Perceptron" )
+kable(auc, caption = "Model comparison - Area Under the ROC curve", digits = 3, format.args = list(big.mark = ",",
+  scientific = FALSE))%>%
+  kable_styling(latex_options = "HOLD_position")
 ```

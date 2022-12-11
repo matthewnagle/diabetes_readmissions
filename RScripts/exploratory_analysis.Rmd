@@ -13,7 +13,7 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# [Click here to link to my gpresentation](https://github.com/B203349/B203349_assessment)
+# [Click here to link to my presentation](https://github.com/B203349/B203349_assessment)
 
 # Loading the required packages required for this script
 

@@ -3,13 +3,14 @@ mlp_model = ml_multilayer_perceptron_classifier(
   gear_relabelled ~ z_hp + cyl_4 + cyl_6 + cyl_8,
   layers = c(4, 8, 8, 3)
 )
-predictions = ml_predict(mlp_model, diabetic_data)
+mlp_predictions = ml_predict(mlp_model, diabetic_data_test)
 head(predictions)
 
 layers =c(163, 80, 80, 2)
 
 head(predictions)
-ml_evaluate(mlp_model, diabetic_data)
+ml_evaluate(mlp_model, diabetic_data_test)
+mlp_auc <- ml_binary_classification_evaluator(mlp_predictions, label_col = "early_readmission")
 
 #geradient boosted trees
 #ran without error 

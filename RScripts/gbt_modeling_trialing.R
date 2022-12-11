@@ -176,12 +176,11 @@ gbt_model = ml_gradient_boosted_trees(
     gender,
   type = "classification")
 
-predictions = ml_predict(gbt_model, diabetic_data_partitions$diabetic_data_training)
-gbt_eval <- ml_binary_classification_evaluator(predictions, label_col = "early_readmission")
-gbt_eval <- ml_evaluate(gbt_model, diabetic_data_partitions$diabetic_data_training)
+predictions = ml_predict(gbt_model, diabetic_data_test)
+gbt_eval_AUC <- ml_binary_classification_evaluator(predictions, label_col = "early_readmission")
+gbt_eval_accuracy <- ml_evaluate(gbt_model, diabetic_data_test)
 
-roc <- gbt_eval$roc()%>%
-  collect()
+
 
 featureImport <- ml_tree_feature_importance(gbt_model)
 featureImport[1:20,] %>% ggplot(aes(reorder(feature, importance),importance,fill=feature)) + 

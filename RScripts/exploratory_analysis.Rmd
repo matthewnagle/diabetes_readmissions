@@ -13,7 +13,7 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# [Click here to link to my gpresentation](https://github.com/B203349/B203349_assessment)
+# [Click here to link to my presentation](https://media.ed.ac.uk/media/Kaltura+Capture+recording+-+December+11th+2022%2C+10A32A22+pm/1_l6jn16h3)
 
 # Loading the required packages required for this script
 
@@ -1084,7 +1084,7 @@ lg_auc <- lg_model_metrics$area_under_roc()
 ```
 
 #### Graph ROC curve for the logistic regression model
-```{r}
+```{r, tidy=TRUE, tidy.opts=list(width.cutoff=50)}
 lg_roc <- lg_model_metrics$roc() %>%
   collect()
 
@@ -1120,3 +1120,6 @@ kable(auc, caption = "Model comparison - Area Under the ROC curve", digits = 3, 
   scientific = FALSE))%>%
   kable_styling(latex_options = "HOLD_position")
 ```
+
+## Model selection
+On review of the above I feel that the most appropriate model is gradient boosted trees. This results in the best AUC and also provides better transparency with regard what features have the most influence on early readmission.

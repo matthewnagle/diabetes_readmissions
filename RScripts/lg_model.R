@@ -167,3 +167,23 @@ lg_model = ml_logistic_regression(diabetic_data, early_readmission ~
                                     medical_specialty_unkown,
                                   fit_intercept = FALSE,
                                   family = "binomial")
+
+lg_model = ml_logistic_regression(
+  diabetic_data,
+  early_readmission ~
+    diag_1_cat,
+  diag_2_cat,
+  diag_3_cat,
+  
+  
+  fit_intercept = FALSE,
+  family = "binomial")
+
+summary(lg_model)
+lg_results = tidy(lg_model)
+lg_results
+
+#evaluate
+lg_model_metrics = ml_evaluate(lg_model, diabetic_data)
+lg_model_metrics
+lg_model_metrics$area_under_roc()

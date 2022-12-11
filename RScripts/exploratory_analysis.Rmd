@@ -3,7 +3,9 @@ title: "Project"
 author: "B203349"
 date: "`r Sys.Date()`"
 output:
-  pdf_document: default
+  pdf_document:
+    toc: true
+    toc_depth: 2
   html_document: default
 ---
 
@@ -28,6 +30,7 @@ library(ggplot2)
 library(dbplot)
 library(janitor)
 library(broom)
+library(formatR)
 ```
 
 ## Connecting to Spark in local mode
@@ -41,14 +44,14 @@ sc = spark_connect(master = 'local')
 The **Diabetes 130-US hospitals for years 1999-2008 Data Set** is an extract representing 10 years (1999–2008) of clinical care at 130 hospitals and integrated delivery networks throughout the United States. The dataset was compiled Strack et al[1] and is in .csv format.
 
 ## Read .csv downloaded from and create dataframe
-```{r read csv}
+```{r, tidy=TRUE, tidy.opts=list(width.cutoff=25)}
 #diabetic_data = spark_read_csv(sc, '/Users/matt/Desktop/Dropbox/Home/College/Edinburgh - MSc Data Science/Big Data Analytics/diabetes_readmissions/RawData/diabetic_data.csv') 
 diabetic_data = spark_read_csv(sc, '/home/jovyan/Matt/diabetes_readmissions/RawData/diabetic_data.csv')
 ```
 
 # Exploratory analysis
 
-##Summary of data
+## Summary of data
 The dataset contains over 50 variables, broadly these describe: patient demographics, patient diagnoses, admission and discharge dispositions, length of stay, blood glucose levels, medication types and changes, and readmission data. Furthermore, procedures, medications, and outpatient / inpatient / ED visits are all also quantified. The full list of variables is outlined below: 
 
 ```{r glimpse data}
@@ -66,8 +69,7 @@ diabetic_data <- diabetic_data %>%
 ```
 
 ## Duplicate patients
-The dataset contains 16,773 patients with multiple admissions (accounting for 47,021 observed admissions). As outlined by the code below:
-```{r}
+```{r, tidy=TRUE, tidy.opts=list(width.cutoff=50)}
 #total number of patient encounters 
 total_number_of_patient_encounters <-pull(diabetic_data, patient_nbr)%>%
   length()
@@ -85,12 +87,31 @@ number_of_patient_classed_as_repeat <- diabetic_data %>%
   filter(n()>1) %>%
   sdf_nrow()
 
+patient_encounters_table <- data.frame(
+  n = c(
+    total_number_of_patient_encounters,
+    number_of_patient_classed_as_repeat,
+    number_of_patient_with_repeat_encounters)
+  )
 
-print(paste("Total number of patient encounters:", total_number_of_patient_encounters))
-print(paste("Number of patients with repeat encounters:", number_of_patient_with_repeat_encounters))
-print(paste("Number of patient encounters that can be classified as 'repeat':", number_of_patient_classed_as_repeat))
+row.names(patient_encounters_table) <- c(
+  "Total number of patient encounters:",
+  "Number of patient encounters that can be classified as 'repeat':",
+  "Number of patients with repeat encounters:"
+  )
+
+kable(
+  patient_encounters_table,
+  caption = "Summary of patient encounters",
+  digits = 3,
+  format.args = list(
+    big.mark = ",",
+    scientific = FALSE)
+  )
+
 
 ```
+As outlined above. The dataset contains 16,773 patients with multiple admissions (accounting for 47,021 observed admissions).
 
 ### Removing duplicate patients
 It cannot be assumed that the reason for these repeat admissions are independent. Statistical independence between observations is an assumption in some predictive models e.g. logistic regression. Therefore the dataset was cleaned to include only the **initial encounter** of repeat patients using the following code: 
@@ -127,29 +148,41 @@ kable(NA_count)
 
 From the table above it is clear that `weight`, `payer_code` and `medical_speciality` have a significant number of missing variables. The exact percentage of missing variables is further explored below:
 
-```{r}
-diabetic_data %>% 
+```{r, tidy=TRUE, tidy.opts=list(width.cutoff=50)}
+missing_medical_specialty <- diabetic_data %>% 
   count(medical_specialty) %>%
   mutate(percent_missing = ((n / sum(n))*100)) %>% 
-  filter(is.na(medical_specialty))
+  mutate(percent_missing = round(percent_missing, 2)) %>%
+  filter(is.na(medical_specialty))%>%
+  pull(percent_missing)
 
-diabetic_data %>% 
+missing_payer_code <- diabetic_data %>% 
   count(payer_code) %>%
   mutate(percent_missing = ((n / sum(n))*100)) %>% 
-  filter(is.na(payer_code))
+  mutate(percent_missing = round(percent_missing, 2)) %>%
+  filter(is.na(payer_code))%>%
+  pull(percent_missing)
 
-diabetic_data %>% 
+missing_weight <- diabetic_data %>% 
   count(weight) %>%
   mutate(percent_missing = ((n / sum(n))*100)) %>% 
-  filter(is.na(weight))
+  mutate(percent_missing = round(percent_missing, 2)) %>%
+  filter(is.na(weight)) %>%
+  pull(percent_missing)
+
+missing_variables_table <- data.frame( percent = c(missing_medical_specialty, missing_payer_code, missing_weight))
+row.names(missing_variables_table) <- c("medical_specialty", "payer_code:", "weight" )
+kable(missing_variables_table, caption = "Variables with a high proportion of missing values", digits = 3, format.args = list(big.mark = ",",
+  scientific = FALSE)) %>%
+kable_styling(latex_options = "HOLD_position")
 ```
-Given the amount of missing values from `weight` this column is removed from inclusion in further analysis
+Given the amount of missing values, `weight` and `payer_code` are removed from inclusion in further analysis. Although `medical_speciality` also has a high rate of missing values, this variable was retained as it was postulated that it may be very relevant to the further analysis.
 ```{r}
-diabetic_data <- select(diabetic_data, -c(weight))
+diabetic_data <- select(diabetic_data, -c(weight, payer_code))
 ```
 
-## Exploration of numericcal variables
-### Summary stats numerical variables
+# Exploration of numericcal variables
+## Summary stats numerical variables
 ```{r}
 summary_stats_num_var <- sdf_describe(diabetic_data, cols = 
                c('time_in_hospital',
@@ -271,9 +304,11 @@ plot_grid(time_in_hospital_plot,
           num_procedures_plot,
           number_diagnoses_plot)
 ```
+
 # Exploration and feature engineering of categorical variables
 ## Age, Race, and gender
-##Visualisation of Age, Race, and gender
+### Visualisation of Age, Race, and gender
+
 ```{r}
 # Data manipulations are done first using spark and collected
 age_group = diabetic_data %>% 
@@ -370,7 +405,8 @@ diabetic_data %>%
   kable()
 ```
 
-Create a new variable that classifies those readmitted within 30 days and those not, as this is the specific question posed by the challenge.
+### Feature engineering of readmission data 
+A variable (`early_readmission`) is created that classifies those readmitted within 30 days and those not, as this is the specific question posed by the challenge.
 
 ```{r}
 ## create a new column with readmission <30
@@ -388,25 +424,28 @@ With regard to the diagnosis variables (`diag_1`, `diag_2`, and `diag_3`) initia
 #count of the number of unique primary Dx (698)
 n_primary_dx <- diabetic_data %>%
   summarise(count = n_distinct(diag_1)) %>%
-  collect()
+  pull()
 
 #count of the number of unique secondary Dx (749)
 n_secondary_dx <- diabetic_data %>%
   summarise(count = n_distinct(diag_2)) %>%
-  collect()
+  pull()
 
 #count of the number of unique tertiary Dx (759)
 n_tertiary_dx <- diabetic_data %>%
   summarise(count = n_distinct(diag_3)) %>%
-  collect()
+  pull()
 
-
-print(paste("Total number of different primary diagnosis categories:", n_primary_dx))
-print(paste("Total number of different secondary diagnosis categories:", n_secondary_dx))
-print(paste("Total number of different tertiary diagnosis categories:", n_tertiary_dx))
+diagnosis_n <- data.frame( n = c(n_primary_dx, n_secondary_dx, n_tertiary_dx))
+row.names(diagnosis_n) <- c("Primary Dx", "Secondary Dx:", "Tertiary Dx" )
+kable(diagnosis_n, caption = "Total number of different diagnosis categories", digits = 3, format.args = list(big.mark = ",",
+  scientific = FALSE))
 ```
+### Feature engineering of Diagnosis variables
 As illustrated above there are 698 unique primary diagnoses, 749 unique secondary diagnoses, and 759 tertiary diagnoses. Maintaining categorical variables with such high levels will be computationally expensive, diagnoses will be consolidated into more manageable levels.
 This is performed below using the ICD-9 code. Diagnoses have been consolidated according to the ICD-9 chapters, with each chapter essentially representing a different bodily system. A seperate category for diabetes has also been created. It should be noted that this still results in 19 categories. 
+
+#### Consolidation of `diag_1`, `diag_2`, and `diag_3` variables
 
 ```{r}
 #consolidate according to ICD9 code
@@ -481,7 +520,8 @@ diabetic_data <- diabetic_data %>%
   )
 ```
 
-The diagnosis cagtegories are then one hot encoded
+#### One hot encoding of diagnnsis categories
+The diagnosis categories are then one hot encoded
 ```{r}
 #one_hot_encode diagnosis 
 diabetic_data <- diabetic_data %>%
@@ -550,6 +590,7 @@ diabetic_data <- diabetic_data %>%
 ```
 
 ## Blood sugars
+### Feature engineering of blood sugar variables
 The blood sugar variable (i.e. `max_glu_serum` and `A1Cresult`) are one hot encoded
 ```{r}
 diabetic_data <- diabetic_data %>%
@@ -575,10 +616,11 @@ list_of_medical_specialty <- diabetic_data %>%
   arrange(desc(n)) %>%
   collect()
 
-kable(list_of_medical_specialty)
+kable(list_of_medical_specialty) %>%
+  kable_styling(latex_options = "scale_down")
 ```
-
-Each category of medical speciality is one hot encoded. I did not consolidate this group as getting a granular understanding of the influence that each group has on the readmission rate is important. As this can be directly fed back to the respective group to affect change. 
+### Feature engineering of `medical_specialty`
+Each category of `medical_speciality` is one hot encoded. I did not consolidate this group as getting a granular understanding of the influence that each group has on the readmission rate is important. As this can be directly fed back to the respective group to affect change. 
 
 ```{r}
 #one_hot_encode diagnosis 1
@@ -658,7 +700,9 @@ diabetic_data <- diabetic_data %>%
     DCPTEAM = ifelse(medical_specialty == 'DCPTEAM' & !is.na(medical_specialty), 1,0),
     medical_specialty_unkown = ifelse(is.na(medical_specialty), 1,0))
 ```
+
 ## Admission type
+### Consolidation of `admission_type_id`
 `admission_type_id` in consolidated into 4 categories. Using the IDs_mapping.csv file the numerical value for `admission_type_id` is exchanged for character / descriptive value
 ```{r}
 diabetic_data <- diabetic_data %>%
@@ -672,6 +716,7 @@ diabetic_data <- diabetic_data %>%
       TRUE ~ admission_type_id))
 ```
 
+### One hot encoding of `admission_type_consolidated`
 The `admission_type_consolidated` variable is then one hot encoded 
 ```{r}
 diabetic_data <- diabetic_data %>%
@@ -683,7 +728,8 @@ diabetic_data <- diabetic_data %>%
 ```
 
 ## Discharge disposition
-`discharge_disposition` in consolidated into 9 categories. Using the IDs_mapping.csv file the numerical value for `discharge_disposition` is exchanged for character / descriptive value
+### Consolidation of `discharge_disposition` variable
+`discharge_disposition` in consolidated into 9 categories. Using the IDs_mapping.csv file the numerical value for `discharge_disposition` is exchanged for a character / descriptive value
 ```{r}
 diabetic_data <- diabetic_data %>%
   mutate(
@@ -700,7 +746,7 @@ diabetic_data <- diabetic_data %>%
       TRUE ~ discharge_disposition_id))
 ```
 
-Graphing of consolidated discharge dispositions
+###Graphing of consolidated discharge dispositions
 ```{r}
 discharge_disposition_group = diabetic_data %>% 
   count(discharge_disposition_consolidated) %>%
@@ -717,7 +763,7 @@ discharge_disposition_plot <-
 discharge_disposition_plot
 ```
 
-
+### One hot encoding of `discharge_disposition_consolidated`
 The consolidated discharge disposition variable ( `discharge_disposition_consolidated`) is then one hot encoded
 ```{r}
 #one_hot_encode discharge_disposition_consolidated
@@ -733,7 +779,27 @@ diabetic_data <- diabetic_data %>%
     unknown_discharge_disposition = ifelse(discharge_disposition_consolidated == 'unknown_discharge_disposition', 1,0))
 ```
 
-#Partitioning of dataset
+## Change to diabetic medication
+The `change` variable indicates if there was a change in diabetic medications (either dosage or generic name). Initial values are: “change” and “no change”. These are respectively encoded to 1 and 0.
+```{r}
+diabetic_data <- diabetic_data %>%
+  mutate(
+    change = ifelse(change == 'Ch', 1,0)
+  )
+```
+
+## Diabetes medication
+The `diabetesMed` variable indicates if there was any diabetic medication prescribed. Values are: “yes” and “no”. These are respectively encoded to 1 and 0.
+```{r}
+diabetic_data <- diabetic_data %>%
+  mutate(
+    diabetesMed = ifelse(diabetesMed == 'Yes', 1,0)
+  )
+```
+
+
+
+# Partitioning of dataset
 The `diabetic_data` dataset is partition into a **training** and **test** dataset.
 Importantly this is done before creating the z-scores for the respective numerical variables. Otherwise there would be cross over of data.
 ```{r diabetic_data}
@@ -940,7 +1006,9 @@ gbt_model = ml_gradient_boosted_trees(diabetic_data_partitions$diabetic_data_tra
                                         Radiologist +
                                         Perinatology +
                                         DCPTEAM +
-                                        medical_specialty_unkown,
+                                        medical_specialty_unkown +
+                                        change +
+                                        diabetesMed,
                                     type = "classification")
 ```
 
@@ -951,9 +1019,17 @@ ml_binary_classification_evaluator(predictions, label_col = "early_readmission")
 
 diabetic_data_partitions$diabetic_data_test
 ```
+
 Testing model on test data
 ```{r}
 predictions = ml_predict(gbt_model, diabetic_data_partitions$diabetic_data_test)
 ml_binary_classification_evaluator(predictions, label_col = "early_readmission")
 ```
 
+Graphing of feature importance
+```{r}
+featureImport <- ml_tree_feature_importance(gbt_model)
+featureImport[1:20,] %>% ggplot(aes(reorder(feature, importance),importance,fill=feature)) + 
+  geom_bar(stat = "identity") + coord_flip() + ggtitle("Top 20 feature importance") + 
+  theme(legend.position="none") + ylab("importance") + xlab("feature")
+```

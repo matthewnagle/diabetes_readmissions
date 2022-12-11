@@ -13,23 +13,105 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+```{r}
+library(sparklyr)
+library(dplyr)
+library(ggplot2)
+library(cowplot)
+library(knitr)
+library(kableExtra)
+library(tidyverse) 
+library(lubridate) 
+library(ggplot2)
+library(dbplot)
+library(janitor)
+library(broom)
+library(formatR)
+```
 ## R Markdown
-
+```{r warning = FALSE}
+sc = spark_connect(master = 'local')
+```
+```{r, tidy=TRUE, tidy.opts=list(width.cutoff=25)}
+#diabetic_data = spark_read_csv(sc, '/Users/matt/Desktop/Dropbox/Home/College/Edinburgh - MSc Data Science/Big Data Analytics/diabetes_readmissions/RawData/diabetic_data.csv') 
+diabetic_data <- spark_read_csv(sc, '/home/jovyan/Matt/diabetes_readmissions/RawData/diabetic_data.csv')
+```
 This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
 
 When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 
-```{r, tidy=TRUE, tidy.opts=list(width.cutoff=80)}
-#diabetic_data = spark_read_csv(sc, '/Users/matt/Desktop/Dropbox/Home/College/Edinburgh - MSc Data Science/Big Data Analytics/diabetes_readmissions/RawData/diabetic_data.csv') 
-#diabetic_data = spark_read_csv(sc, '/home/jovyan/Matt/diabetes_readmissions/RawData/diabetic_data.csv')
+```{r, tidy=TRUE, tidy.opts=list(width.cutoff=50)}
+#total number of patient encounters 
+total_number_of_patient_encounters <-pull(diabetic_data, patient_nbr)%>%
+  length()
+
+#number of patients with repeat encounters
+number_of_patient_with_repeat_encounters <- diabetic_data %>%
+  group_by(patient_nbr) %>%
+  filter(n()>1) %>%
+  tally() %>%
+  sdf_nrow()
+
+#number of patient encounters that can be classified as 'repeat'
+number_of_patient_classed_as_repeat <- diabetic_data %>%
+  group_by(patient_nbr) %>%
+  filter(n()>1) %>%
+  sdf_nrow()
+
+patient_encounters_table <- data.frame(
+  n = c(
+    total_number_of_patient_encounters,
+    number_of_patient_classed_as_repeat,
+    number_of_patient_with_repeat_encounters)
+  )
+
+row.names(patient_encounters_table) <- c(
+  "Total number of patient encounters:",
+  "Number of patient encounters that can be classified as 'repeat':",
+  "Number of patients with repeat encounters:"
+  )
+
+kable(
+  patient_encounters_table,
+  caption = "Summary of patient encounters",
+  digits = 3,
+  format.args = list(
+    big.mark = ",",
+    scientific = FALSE)
+  )
 ```
 
 ## Including Plots
 
 You can also embed plots, for example:
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r, tidy=TRUE, tidy.opts=list(width.cutoff=50)}
+missing_medical_specialty <- diabetic_data %>% 
+  count(medical_specialty) %>%
+  mutate(percent_missing = ((n / sum(n))*100)) %>% 
+  mutate(percent_missing = round(percent_missing, 2)) %>%
+  filter(is.na(medical_specialty))%>%
+  pull(percent_missing)
+
+missing_payer_code <- diabetic_data %>% 
+  count(payer_code) %>%
+  mutate(percent_missing = ((n / sum(n))*100)) %>% 
+  mutate(percent_missing = round(percent_missing, 2)) %>%
+  filter(is.na(payer_code))%>%
+  pull(percent_missing)
+
+missing_weight <- diabetic_data %>% 
+  count(weight) %>%
+  mutate(percent_missing = ((n / sum(n))*100)) %>% 
+  mutate(percent_missing = round(percent_missing, 2)) %>%
+  filter(is.na(weight)) %>%
+  pull(percent_missing)
+
+missing_variables_table <- data.frame( percent = c(missing_medical_specialty, missing_payer_code, missing_weight))
+row.names(missing_variables_table) <- c("medical_specialty", "payer_code:", "weight" )
+kable(missing_variables_table, caption = "Variables with a high proportion of missing values", digits = 3, format.args = list(big.mark = ",",
+  scientific = FALSE)) %>%
+kable_styling(latex_options = "HOLD_position")
 ```
 
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

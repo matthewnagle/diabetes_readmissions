@@ -1,6 +1,6 @@
 ----------------------------------------------------------------
-Sat Dec 10 18:42:35 UTC 2022:
-Booting Derby version The Apache Software Foundation - Apache Derby - 10.14.2.0 - (1828579): instance a816c00e-0184-fd58-a377-0000020d4810 
+Sun Dec 11 13:31:40 UTC 2022:
+Booting Derby version The Apache Software Foundation - Apache Derby - 10.14.2.0 - (1828579): instance a816c00e-0185-0162-5735-00000214b9b0 
 on database directory memory:/home/jovyan/Matt/diabetes_readmissions/RScripts/databaseName=metastore_db with class loader jdk.internal.loader.ClassLoaders$AppClassLoader@5c29bfd 
 Loaded from file:/home/jovyan/spark/spark-3.2.3-bin-hadoop3.2/jars/derby-10.14.2.0.jar
 java.vendor=Oracle Corporation
@@ -8,6 +8,6 @@ java.runtime.version=11.0.1-internal+0-adhoc..src
 user.dir=/home/jovyan/Matt/diabetes_readmissions/RScripts
 os.name=Linux
 os.arch=amd64
-os.version=5.4.224-1.el7.elrepo.x86_64
+os.version=5.4.156-1.el7.elrepo.x86_64
 derby.system.home=null
 Database Class Loader started - derby.database.classpath=''

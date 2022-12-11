@@ -1,6 +1,6 @@
 ----------------------------------------------------------------
-Sun Dec 11 13:31:40 UTC 2022:
-Booting Derby version The Apache Software Foundation - Apache Derby - 10.14.2.0 - (1828579): instance a816c00e-0185-0162-5735-00000214b9b0 
+Sun Dec 11 16:02:15 UTC 2022:
+Booting Derby version The Apache Software Foundation - Apache Derby - 10.14.2.0 - (1828579): instance a816c00e-0185-01ec-3623-000001fb9aa0 
 on database directory memory:/home/jovyan/Matt/diabetes_readmissions/RScripts/databaseName=metastore_db with class loader jdk.internal.loader.ClassLoaders$AppClassLoader@5c29bfd 
 Loaded from file:/home/jovyan/spark/spark-3.2.3-bin-hadoop3.2/jars/derby-10.14.2.0.jar
 java.vendor=Oracle Corporation

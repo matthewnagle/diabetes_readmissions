@@ -1,9 +1,9 @@
 ---
-title: "Project_test"
+title: "Project"
 author: "B203349"
 date: "`r Sys.Date()`"
 output:
-  pdf_document: 
+  pdf_document:
     toc: true
     toc_depth: 2
   html_document: default
@@ -13,7 +13,11 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r}
+# [Click here to link to my gpresentation](https://github.com/B203349/B203349_assessment)
+
+# Loading the required packages required for this script
+
+```{r load packages, echo = TRUE, warning = FALSE, message = FALSE}
 library(sparklyr)
 library(dplyr)
 library(ggplot2)
@@ -28,18 +32,43 @@ library(janitor)
 library(broom)
 library(formatR)
 ```
-## R Markdown
+
+## Connecting to Spark in local mode
+
 ```{r warning = FALSE}
 sc = spark_connect(master = 'local')
 ```
+
+# Loading datasets 
+## Data
+The **Diabetes 130-US hospitals for years 1999-2008 Data Set** is an extract representing 10 years (1999–2008) of clinical care at 130 hospitals and integrated delivery networks throughout the United States. The dataset was compiled Strack et al[1] and is in .csv format.
+
+## Read .csv downloaded from and create dataframe
 ```{r, tidy=TRUE, tidy.opts=list(width.cutoff=25)}
 #diabetic_data = spark_read_csv(sc, '/Users/matt/Desktop/Dropbox/Home/College/Edinburgh - MSc Data Science/Big Data Analytics/diabetes_readmissions/RawData/diabetic_data.csv') 
-diabetic_data <- spark_read_csv(sc, '/home/jovyan/Matt/diabetes_readmissions/RawData/diabetic_data.csv')
+diabetic_data = spark_read_csv(sc, '/home/jovyan/Matt/diabetes_readmissions/RawData/diabetic_data.csv')
 ```
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+# Exploratory analysis
 
+## Summary of data
+The dataset contains over 50 variables, broadly these describe: patient demographics, patient diagnoses, admission and discharge dispositions, length of stay, blood glucose levels, medication types and changes, and readmission data. Furthermore, procedures, medications, and outpatient / inpatient / ED visits are all also quantified. The full list of variables is outlined below: 
+
+```{r glimpse data}
+glimpse(diabetic_data)
+```
+
+# Data cleaning, exploration, and feature engineering
+
+## Conversion of '?' to NA
+From review of the dataframe is a apparent that '?' is used instead of NA. To faciliate data cleaning and wrangling '?' is switched to NA.
+```{r}
+#replace '?' with NA
+diabetic_data <- diabetic_data %>%
+  mutate(across(where(is.character), ~na_if(., "?")))
+```
+
+## Duplicate patients
 ```{r, tidy=TRUE, tidy.opts=list(width.cutoff=50)}
 #total number of patient encounters 
 total_number_of_patient_encounters <-pull(diabetic_data, patient_nbr)%>%
@@ -78,14 +107,57 @@ kable(
   format.args = list(
     big.mark = ",",
     scientific = FALSE)
-  )
+  ) %>%
+kable_styling(latex_options = "HOLD_position")
+
+
+```
+As outlined above. The dataset contains 16,773 patients with multiple admissions (accounting for 47,021 observed admissions).
+
+### Removing duplicate patients
+It cannot be assumed that the reason for these repeat admissions are independent. Statistical independence between observations is an assumption in some predictive models e.g. logistic regression. Therefore the dataset was cleaned to include only the **initial encounter** of repeat patients using the following code: 
+
+```{r}
+#group by patient number then select only the earliest patient encounter
+diabetic_data <- diabetic_data %>% 
+  group_by(patient_nbr) %>%
+  slice_min(encounter_id) %>% #slice_min selects the rows with lowest values
+  ungroup()
 ```
 
-## Including Plots
+Once this is done `patient_nbr` and `ecnounter_id` are redundant so these columns are removed
 
-You can also embed plots, for example:
+```{r}
+diabetic_data <- select(diabetic_data, -c(patient_nbr, encounter_id))
+```
 
-```{r, tidy=TRUE, tidy.opts=list(width.cutoff=50)}
+## Missing variables
+```{r}
+#count the number of  NAs per column
+NA_count <- diabetic_data %>%
+  summarise_all(~sum(as.integer(is.na(.)))) %>%
+  collect()
+
+#transpose dataframe (convert from wide to long)
+NA_count <- t(NA_count) 
+
+#rename column 1 to missing_values
+colnames(NA_count)[1] ="missing_values"
+
+kable(
+  NA_count,
+  caption = "Total of missing observations per feature",
+  digits = 3,
+  format.args = list(
+    big.mark = ",",
+    scientific = FALSE)
+  ) %>%
+kable_styling(latex_options = "HOLD_position")
+```
+
+From the table above it is clear that `weight`, `payer_code` and `medical_speciality` have a significant number of missing variables. The exact percentage of missing variables is further explored below:
+
+```{r}
 missing_medical_specialty <- diabetic_data %>% 
   count(medical_specialty) %>%
   mutate(percent_missing = ((n / sum(n))*100)) %>% 
@@ -108,10 +180,663 @@ missing_weight <- diabetic_data %>%
   pull(percent_missing)
 
 missing_variables_table <- data.frame( percent = c(missing_medical_specialty, missing_payer_code, missing_weight))
-row.names(missing_variables_table) <- c("medical_specialty", "payer_code:", "weight" )
+row.names(missing_variables_table) <- c("medical_specialty", "payer_code", "weight" )
 kable(missing_variables_table, caption = "Variables with a high proportion of missing values", digits = 3, format.args = list(big.mark = ",",
-  scientific = FALSE)) %>%
+  scientific = FALSE))%>%
 kable_styling(latex_options = "HOLD_position")
 ```
+Given the amount of missing values, `weight` and `payer_code` are removed from inclusion in further analysis. Although `medical_speciality` also has a high rate of missing values, this variable was retained as it was postulated that it may be very relevant to the further analysis.
+```{r}
+diabetic_data <- select(diabetic_data, -c(weight, payer_code))
+```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+# Exploration of numericcal variables
+## Summary stats numerical variables
+```{r, tidy=TRUE, tidy.opts=list(width.cutoff=50)}
+summary_stats_num_var <- sdf_describe(diabetic_data, cols = 
+               c('time_in_hospital',
+                 'num_medications',
+                 'number_inpatient',
+                 'num_lab_procedures',
+                 'number_outpatient',
+                 'number_diagnoses',
+                 'num_procedures',
+                 'number_emergency')) %>%
+  collect()
+
+kable(
+  t(summary_stats_num_var),
+  caption = "Summary statistics for numerical variables",
+  digits = 3,
+  format.args = list(
+    big.mark = ",",
+    scientific = FALSE)
+  ) %>%
+  kable_styling(latex_options = "scale_down") %>%
+  kable_styling(latex_options = "HOLD_position")
+```
+
+## Visualisation of numerical variables
+```{r}
+#create summary groups of numerical variable to collect and use in ggplot
+time_in_hospital_group = diabetic_data %>% 
+  count(time_in_hospital) %>%
+  arrange(time_in_hospital) %>%
+  collect()
+
+num_medications_group = diabetic_data %>% 
+  count(num_medications) %>%
+  arrange(num_medications) %>%
+  collect()
+
+number_inpatient_group = diabetic_data %>% 
+  count(number_inpatient) %>%
+  arrange(number_inpatient) %>%
+  collect()
+
+num_lab_procedures_group = diabetic_data %>% 
+  count(num_lab_procedures) %>%
+  arrange(num_lab_procedures) %>%
+  collect()
+
+number_outpatient_group = diabetic_data %>% 
+  count(number_outpatient) %>%
+  arrange(number_outpatient) %>%
+  collect()
+
+number_diagnoses_group = diabetic_data %>% 
+  count(number_diagnoses) %>%
+  arrange(number_diagnoses) %>%
+  collect()
+
+num_procedures_group = diabetic_data %>% 
+  count(num_procedures) %>%
+  arrange(num_procedures) %>%
+  collect()
+
+number_emergency_group = diabetic_data %>% 
+  count(number_emergency) %>%
+  arrange(number_emergency) %>%
+  collect()
+
+#create plots
+time_in_hospital_plot <- 
+  ggplot(aes(as.numeric(time_in_hospital), n), data = time_in_hospital_group) +
+  geom_col(fill = 'SteelBlue') +
+  scale_x_continuous(breaks=seq(0, 20, 2))  +
+  xlab('Time in hospital (days)') +
+  ylab('Count')
+
+num_medications_plot <- 
+  ggplot(aes(as.numeric(num_medications), n), data = num_medications_group) +
+  geom_col(fill = 'SteelBlue') +
+  scale_x_continuous(breaks=seq(0, 80, 10))  +
+  xlab('Number of medications') +
+  ylab('Count')
+
+number_inpatient_plot <- 
+  ggplot(aes(as.numeric(number_inpatient), n), data = number_inpatient_group) +
+  geom_col(fill = 'SteelBlue') +
+  #scale_x_continuous(breaks=seq(0, 15, 5))  +
+  xlab('Number of inpatient visits \n(within preceding year)') +
+  ylab('Count')
+
+number_outpatient_plot <- 
+  ggplot(aes(as.numeric(number_outpatient), n), data = number_outpatient_group) +
+  geom_col(fill = 'SteelBlue') +
+  scale_x_continuous(breaks=seq(0, 40, 5))  +
+  xlab('Number of outpatient visits \n(within preceding year)') +
+  ylab('Count')
+
+number_emergency_plot <- 
+  ggplot(aes(as.numeric(number_emergency), n), data = number_emergency_group) +
+  geom_col(fill = 'SteelBlue') +
+  xlab('Number of emergency visits \n(within preceding year)') +
+  ylab('Count')
+
+num_lab_procedures_plot <- 
+  ggplot(aes(as.numeric(num_lab_procedures), n), data = num_lab_procedures_group) +
+  geom_col(fill = 'SteelBlue') +
+  xlab('Number of lab tests performed') +
+  ylab('Count')
+
+num_procedures_plot <- 
+  ggplot(aes(as.numeric(num_procedures), n), data = num_procedures_group) +
+  geom_col(fill = 'SteelBlue') +
+  xlab('Number of procedures performed') +
+  ylab('Count')
+
+number_diagnoses_plot <- 
+  ggplot(aes(as.numeric(number_diagnoses), n), data = number_diagnoses_group) +
+  geom_col(fill = 'SteelBlue') +
+  xlab('Number of diagnoses') +
+  ylab('Count')
+
+#combine plots into one grid
+plot_grid(time_in_hospital_plot,
+          num_medications_plot,
+          number_inpatient_plot,
+          number_outpatient_plot,
+          number_emergency_plot,
+          num_lab_procedures_plot,
+          num_procedures_plot,
+          number_diagnoses_plot)
+```
+
+# Exploration and feature engineering of categorical variables
+## Age, Race, and gender
+### Visualisation of Age, Race, and gender
+
+```{r}
+# Data manipulations are done first using spark and collected
+age_group = diabetic_data %>% 
+  count(age) %>%
+  arrange(age) %>%
+  collect()
+
+race_group = diabetic_data %>% 
+  count(race) %>%
+  arrange(race) %>%
+  collect()
+
+gender_group = diabetic_data %>% 
+  count(gender) %>%
+  arrange(gender) %>%
+  collect()
+
+
+#plots created with ggplot
+age_plot <- 
+  ggplot(aes(as.factor(age), n), data = age_group) +
+  geom_col(fill = 'SteelBlue') +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  xlab('Age group') +
+  ylab('Count')
+
+race_plot <-
+  ggplot(aes(as.factor(race), n), data = race_group) +
+  geom_col(fill = 'SteelBlue') +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  xlab('Race') +
+  ylab('Count')
+
+gender_plot <-
+  ggplot(aes(as.factor(gender), n), data = gender_group) +
+  geom_col(fill = 'SteelBlue') +
+  xlab('Gender') +
+  ylab('Count')
+
+
+plot_grid(age_plot, race_plot, gender_plot)
+```
+
+### Feature engineering of 'Age'
+Age is converted to an ordinal scale, using the central age from each category. i.e. patients classed as age '[10-20)' are given the value.
+```{r}
+diabetic_data <- diabetic_data %>%
+  mutate(
+    age_contin = case_when(
+      age == '[0-10)'    ~ 5,
+      age == '[10-20)'   ~ 15,
+      age == '[20-30)'   ~ 25,
+      age == '[30-40)'   ~ 35,
+      age == '[40-50)'   ~ 45,
+      age == '[50-60)'   ~ 55,
+      age == '[60-70)'   ~ 65,
+      age == '[70-80)'   ~ 75,
+      age == '[80-90)'   ~ 85,
+      age == '[90-100)'  ~ 95
+    ))
+```
+
+### Feature engineering of 'Race'
+Race is one hot encoded
+```{r}
+diabetic_data <- diabetic_data %>%
+  mutate(
+    unknown_race = ifelse(is.na(race), 1,0),
+    asian = ifelse(race == 'Asian' & !is.na(race), 1,0),
+    african_american = ifelse(race == 'AfricanAmerican' & !is.na(race), 1,0),
+    caucasian = ifelse(race == 'Caucasian' & !is.na(race), 1,0),
+    hispanic = ifelse(race == 'Hispanic' & !is.na(race), 1,0),
+    other = ifelse(race == 'Other' & !is.na(race), 1,0),
+  )
+```
+
+### Feature engineering of 'Gender'
+Gender is on hot encoded
+```{r}
+diabetic_data <- diabetic_data %>%
+  mutate(
+    female = ifelse(gender == 'Female', 1,0),
+    gender_unknown_invalid = ifelse(gender == 'Unknown/Invalid', 1,0),
+    male = ifelse(gender == 'Male', 1,0)
+  )
+```
+
+## Readmissions
+View the breakdown of readmissions
+
+```{r}
+diabetic_data %>% 
+  count(readmitted) %>%
+kable(
+  caption = "Summary of readmitted feature",
+  digits = 3,
+  format.args = list(
+    big.mark = ",",
+    scientific = FALSE)
+  ) %>%
+  kable_styling(latex_options = "HOLD_position")
+```
+
+### Feature engineering of readmission data 
+A variable (`early_readmission`) is created that classifies those readmitted within 30 days and those not, as this is the specific question posed by the challenge.
+
+```{r, tidy=TRUE, tidy.opts=list(width.cutoff=50)}
+## create a new column with readmission <30
+diabetic_data = mutate(diabetic_data, early_readmission = ifelse(readmitted == '<30', 1, 0))
+
+diabetic_data %>%
+  group_by(early_readmission) %>%
+  tally() %>%
+  kable(
+  caption = "Summary of early readmission feature",
+  digits = 3,
+  format.args = list(
+    big.mark = ",",
+    scientific = FALSE)
+  ) %>%
+  kable_styling(latex_options = "HOLD_position")
+```
+
+## Diagnoses
+With regard to the diagnosis variables (`diag_1`, `diag_2`, and `diag_3`) initial exploration determines the exact number of different diagnosis categories.
+```{r, tidy=TRUE, tidy.opts=list(width.cutoff=50)}
+#count of the number of unique primary Dx (698)
+n_primary_dx <- diabetic_data %>%
+  summarise(count = n_distinct(diag_1)) %>%
+  pull()
+
+#count of the number of unique secondary Dx (749)
+n_secondary_dx <- diabetic_data %>%
+  summarise(count = n_distinct(diag_2)) %>%
+  pull()
+
+#count of the number of unique tertiary Dx (759)
+n_tertiary_dx <- diabetic_data %>%
+  summarise(count = n_distinct(diag_3)) %>%
+  pull()
+
+diagnosis_n <- data.frame( n = c(n_primary_dx, n_secondary_dx, n_tertiary_dx))
+row.names(diagnosis_n) <- c("Primary Dx", "Secondary Dx:", "Tertiary Dx" )
+kable(diagnosis_n, caption = "Total number of different diagnosis categories", digits = 3, format.args = list(big.mark = ",",
+  scientific = FALSE))%>%
+  kable_styling(latex_options = "HOLD_position")
+```
+### Feature engineering of Diagnosis variables
+As illustrated above there are 698 unique primary diagnoses, 749 unique secondary diagnoses, and 759 tertiary diagnoses. Maintaining categorical variables with such high levels will be computationally expensive, diagnoses will be consolidated into more manageable levels.
+This is performed below using the ICD-9 code. Diagnoses have been consolidated according to the ICD-9 chapters, with each chapter essentially representing a different bodily system. A seperate category for diabetes has also been created. It should be noted that this still results in 19 categories. 
+
+#### Consolidation of `diag_1`, `diag_2`, and `diag_3` variables
+
+```{r, tidy=TRUE, tidy.opts=list(width.cutoff=50)}
+#consolidate according to ICD9 code
+diabetic_data <- diabetic_data %>%
+  mutate(
+    diag_1_cat = case_when(
+      rlike(diag_1, "250") ~ 'diabetes', #case_when works in order therefore 'diabetes' will be classed before 'endo_metabolic_immunity'
+      diag_1 >= 000 & diag_1 < 140 ~ 'infection',
+      diag_1 >= 140 & diag_1 < 240 ~ 'neoplasms',
+      diag_1 >= 240 & diag_1 < 280 ~ 'endo_metabolic_immunity',
+      diag_1 >= 280 & diag_1 < 290 ~ 'haematology',
+      diag_1 >= 290 & diag_1 < 320 ~ 'mental',
+      diag_1 >= 320 & diag_1 < 390 ~ 'neurology',
+      diag_1 >= 390 & diag_1 < 460 ~ 'circulatory',
+      diag_1 >= 460 & diag_1 < 520 ~ 'respiratory',
+      diag_1 >= 520 & diag_1 < 580 ~ 'digestive',
+      diag_1 >= 580 & diag_1 < 630 ~ 'genitourinary',
+      diag_1 >= 630 & diag_1 < 680 ~ 'preg_birth_puerperium',
+      diag_1 >= 680 & diag_1 < 710 ~ 'dermatology',
+      diag_1 >= 710 & diag_1 < 740 ~ 'musculoskeletal',
+      diag_1 >= 740 & diag_1 < 760 ~ 'congenital',
+      diag_1 >= 760 & diag_1 < 780 ~ 'perinatal',
+      diag_1 >= 780 & diag_1 < 800 ~ 'ill_defined',
+      diag_1 >= 800 & diag_1 < 1000 ~ 'injury_poisoning',
+      rlike(diag_1, "V") | rlike(diag_1, "E") ~ 'supplementary',
+      is.na(diag_1) ~ 'unknown_diag_1', #NA variables do not get special treatment
+      TRUE ~ diag_1),
+    diag_2_cat = case_when(
+      rlike(diag_2, "250") ~ 'diabetes', #case_when work in order
+      diag_2 >= 000 & diag_2 < 140 ~ 'infection',
+      diag_2 >= 140 & diag_2 < 240 ~ 'neoplasms',
+      diag_2 >= 240 & diag_2 < 280 ~ 'endo_metabolic_immunity',
+      diag_2 >= 280 & diag_2 < 290 ~ 'haematology',
+      diag_2 >= 290 & diag_2 < 320 ~ 'mental',
+      diag_2 >= 320 & diag_2 < 390 ~ 'neurology',
+      diag_2 >= 390 & diag_2 < 460 ~ 'circulatory',
+      diag_2 >= 460 & diag_2 < 520 ~ 'respiratory',
+      diag_2 >= 520 & diag_2 < 580 ~ 'digestive',
+      diag_2 >= 580 & diag_2 < 630 ~ 'genitourinary',
+      diag_2 >= 630 & diag_2 < 680 ~ 'preg_birth_puerperium',
+      diag_2 >= 680 & diag_2 < 710 ~ 'dermatology',
+      diag_2 >= 710 & diag_2 < 740 ~ 'musculoskeletal',
+      diag_2 >= 740 & diag_2 < 760 ~ 'congenital',
+      diag_2 >= 760 & diag_2 < 780 ~ 'perinatal',
+      diag_2 >= 780 & diag_2 < 800 ~ 'ill_defined',
+      diag_2 >= 800 & diag_2 < 1000 ~ 'injury_poisoning',
+      rlike(diag_2, "V") | rlike(diag_2, "E") ~ 'supplementary',
+      is.na(diag_2) ~ 'unknown_diag_2', #NA variable do not get special treatment
+      TRUE ~ diag_2),
+    diag_3_cat = case_when(
+      rlike(diag_3, "250") ~ 'diabetes', #case_when work in order
+      diag_3 >= 000 & diag_3 < 140 ~ 'infection',
+      diag_3 >= 140 & diag_3 < 240 ~ 'neoplasms',
+      diag_3 >= 240 & diag_3 < 280 ~ 'endo_metabolic_immunity',
+      diag_3 >= 280 & diag_3 < 290 ~ 'haematology',
+      diag_3 >= 290 & diag_3 < 320 ~ 'mental',
+      diag_3 >= 320 & diag_3 < 390 ~ 'neurology',
+      diag_3 >= 390 & diag_3 < 460 ~ 'circulatory',
+      diag_3 >= 460 & diag_3 < 520 ~ 'respiratory',
+      diag_3 >= 520 & diag_3 < 580 ~ 'digestive',
+      diag_3 >= 580 & diag_3 < 630 ~ 'genitourinary',
+      diag_3 >= 630 & diag_3 < 680 ~ 'preg_birth_puerperium',
+      diag_3 >= 680 & diag_3 < 710 ~ 'dermatology',
+      diag_3 >= 710 & diag_3 < 740 ~ 'musculoskeletal',
+      diag_3 >= 740 & diag_3 < 760 ~ 'congenital',
+      diag_3 >= 760 & diag_3 < 780 ~ 'perinatal',
+      diag_3 >= 780 & diag_3 < 800 ~ 'ill_defined',
+      diag_3 >= 800 & diag_3 < 1000 ~ 'injury_poisoning',
+      rlike(diag_3, "V") | rlike(diag_3, "E") ~ 'supplementary',
+      is.na(diag_3) ~ 'unknown_diag_3', #NA variable do not get special treatment
+      TRUE ~ diag_3)
+  )
+```
+
+#### One hot encoding of diagnnsis categories
+The diagnosis categories are then one hot encoded
+```{r, tidy=TRUE, tidy.opts=list(width.cutoff=50)}
+#one_hot_encode diagnosis 
+diabetic_data <- diabetic_data %>%
+  mutate(
+    diag_1_infection = ifelse(diag_1_cat == 'infection' & !is.na(diag_1_cat), 1,0),
+    diag_1_neoplasms = ifelse(diag_1_cat == 'neoplasms' & !is.na(diag_1_cat) , 1,0),
+    diag_1_endo_metabolic_immunity = ifelse(diag_1_cat == 'endo_metabolic_immunity' & !is.na(diag_1_cat), 1,0),
+    diag_1_haematology = ifelse(diag_1_cat == 'haematology' & !is.na(diag_1_cat), 1,0),
+    diag_1_mental = ifelse(diag_1_cat == 'mental' & !is.na(diag_1_cat), 1,0),
+    diag_1_neurology = ifelse(diag_1_cat == 'neurology' & !is.na(diag_1_cat), 1,0),
+    diag_1_circulatory = ifelse(diag_1_cat == 'circulatory' & !is.na(diag_1_cat), 1,0),
+    diag_1_respiratory = ifelse(diag_1_cat == 'respiratory' & !is.na(diag_1_cat), 1,0),
+    diag_1_digestive = ifelse(diag_1_cat == 'digestive' & !is.na(diag_1_cat), 1,0),
+    diag_1_genitourinary = ifelse(diag_1_cat == 'genitourinary' & !is.na(diag_1_cat), 1,0),
+    diag_1_preg_birth_puerperium = ifelse(diag_1_cat == 'preg_birth_puerperium' & !is.na(diag_1_cat), 1,0),
+    diag_1_dermatology = ifelse(diag_1_cat == 'dermatology' & !is.na(diag_1_cat), 1,0),
+    diag_1_musculoskeletal = ifelse(diag_1_cat == 'musculoskeletal'& !is.na(diag_1_cat), 1,0),
+    diag_1_congenital = ifelse(diag_1_cat == 'congenital'& !is.na(diag_1_cat), 1,0),
+    diag_1_perinatal = ifelse(diag_1_cat == 'perinatal'& !is.na(diag_1_cat), 1,0),
+    diag_1_ill_defined = ifelse(diag_1_cat == 'ill_defined'& !is.na(diag_1_cat), 1,0),
+    diag_1_injury_poisoning = ifelse(diag_1_cat == 'injury_poisoning'& !is.na(diag_1_cat), 1,0),
+    diag_1_supplementary = ifelse(diag_1_cat == 'supplementary'& !is.na(diag_1_cat), 1,0),
+    diag_1_diabetes = ifelse(diag_1_cat == 'diabetes'& !is.na(diag_1_cat), 1,0),
+    diag_1_unknown = ifelse(diag_1_cat == 'unknown_diag_1'& !is.na(diag_1_cat), 1,0),
+    diag_2_infection = ifelse(diag_2_cat == 'infection'& !is.na(diag_2_cat), 1,0),
+    diag_2_neoplasms = ifelse(diag_2_cat == 'neoplasms'& !is.na(diag_2_cat), 1,0),
+    diag_2_endo_metabolic_immunity = ifelse(diag_2_cat == 'endo_metabolic_immunity'& !is.na(diag_2_cat), 1,0),
+    diag_2_haematology = ifelse(diag_2_cat == 'haematology'& !is.na(diag_2_cat), 1,0),
+    diag_2_mental = ifelse(diag_2_cat == 'mental'& !is.na(diag_2_cat), 1,0),
+    diag_2_neurology = ifelse(diag_2_cat == 'neurology'& !is.na(diag_2_cat), 1,0),
+    diag_2_circulatory = ifelse(diag_2_cat == 'circulatory'& !is.na(diag_2_cat), 1,0),
+    diag_2_respiratory = ifelse(diag_2_cat == 'respiratory'& !is.na(diag_2_cat), 1,0),
+    diag_2_digestive = ifelse(diag_2_cat == 'digestive'& !is.na(diag_2_cat), 1,0),
+    diag_2_genitourinary = ifelse(diag_2_cat == 'genitourinary'& !is.na(diag_2_cat), 1,0),
+    diag_2_preg_birth_puerperium = ifelse(diag_2_cat == 'preg_birth_puerperium'& !is.na(diag_2_cat), 1,0),
+    diag_2_dermatology = ifelse(diag_2_cat == 'dermatology'& !is.na(diag_2_cat), 1,0),
+    diag_2_musculoskeletal = ifelse(diag_2_cat == 'musculoskeletal'& !is.na(diag_2_cat), 1,0),
+    diag_2_congenital = ifelse(diag_2_cat == 'congenital'& !is.na(diag_2_cat), 1,0),
+    diag_2_perinatal = ifelse(diag_2_cat == 'perinatal'& !is.na(diag_2_cat), 1,0),
+    diag_2_ill_defined = ifelse(diag_2_cat == 'ill_defined'& !is.na(diag_2_cat), 1,0),
+    diag_2_injury_poisoning = ifelse(diag_2_cat == 'injury_poisoning'& !is.na(diag_2_cat), 1,0),
+    diag_2_supplementary = ifelse(diag_2_cat == 'supplementary'& !is.na(diag_2_cat), 1,0),
+    diag_2_diabetes = ifelse(diag_2_cat == 'diabetes'& !is.na(diag_2_cat), 1,0),
+    diag_2_unknown = ifelse(diag_2_cat == 'unknown_diag_2'& !is.na(diag_2_cat), 1,0),
+    diag_3_infection = ifelse(diag_3_cat == 'infection'& !is.na(diag_3_cat), 1,0),
+    diag_3_neoplasms = ifelse(diag_3_cat == 'neoplasms'& !is.na(diag_3_cat), 1,0),
+    diag_3_endo_metabolic_immunity = ifelse(diag_3_cat == 'endo_metabolic_immunity'& !is.na(diag_3_cat), 1,0),
+    diag_3_haematology = ifelse(diag_3_cat == 'haematology'& !is.na(diag_3_cat), 1,0),
+    diag_3_mental = ifelse(diag_3_cat == 'mental'& !is.na(diag_3_cat), 1,0),
+    diag_3_neurology = ifelse(diag_3_cat == 'neurology'& !is.na(diag_3_cat), 1,0),
+    diag_3_circulatory = ifelse(diag_3_cat == 'circulatory'& !is.na(diag_3_cat), 1,0),
+    diag_3_respiratory = ifelse(diag_3_cat == 'respiratory'& !is.na(diag_3_cat), 1,0),
+    diag_3_digestive = ifelse(diag_3_cat == 'digestive'& !is.na(diag_3_cat), 1,0),
+    diag_3_genitourinary = ifelse(diag_3_cat == 'genitourinary'& !is.na(diag_3_cat), 1,0),
+    diag_3_preg_birth_puerperium = ifelse(diag_3_cat == 'preg_birth_puerperium'& !is.na(diag_3_cat), 1,0),
+    diag_3_dermatology = ifelse(diag_3_cat == 'dermatology'& !is.na(diag_3_cat), 1,0),
+    diag_3_musculoskeletal = ifelse(diag_3_cat == 'musculoskeletal'& !is.na(diag_3_cat), 1,0),
+    diag_3_congenital = ifelse(diag_3_cat == 'congenital'& !is.na(diag_3_cat), 1,0),
+    diag_3_perinatal = ifelse(diag_3_cat == 'perinatal'& !is.na(diag_3_cat), 1,0),
+    diag_3_ill_defined = ifelse(diag_3_cat == 'ill_defined'& !is.na(diag_3_cat), 1,0),
+    diag_3_injury_poisoning = ifelse(diag_3_cat == 'injury_poisoning'& !is.na(diag_3_cat), 1,0),
+    diag_3_supplementary = ifelse(diag_3_cat == 'supplementary'& !is.na(diag_3_cat), 1,0),
+    diag_3_diabetes = ifelse(diag_3_cat == 'diabetes'& !is.na(diag_3_cat), 1,0),
+    diag_3_unknown = ifelse(diag_1_cat == 'unknown_diag_3'& !is.na(diag_3_cat), 1,0),
+  )
+```
+
+## Blood sugars
+### Feature engineering of blood sugar variables
+The blood sugar variable (i.e. `max_glu_serum` and `A1Cresult`) are one hot encoded
+```{r}
+diabetic_data <- diabetic_data %>%
+  mutate(
+    max_glu_serum_none = ifelse(max_glu_serum == 'None', 1,0),
+    max_glu_serum_norm = ifelse(max_glu_serum == 'Norm', 1,0),
+    max_glu_serum_300 = ifelse(max_glu_serum == '>300', 1,0),
+    max_glu_serum_200 = ifelse(max_glu_serum == '>200', 1,0),
+    A1Cresult_none = ifelse(A1Cresult == 'None', 1,0),
+    A1Cresult_norm = ifelse(A1Cresult == 'Norm', 1,0),
+    A1Cresult_7 = ifelse(A1Cresult == '>7', 1,0),
+    A1Cresult_8 = ifelse(A1Cresult == '>8', 1,0))
+```
+
+## Exploration and feature engineering of `medical_speciality`
+First the list of unique medical specialites is compiled along with the frequency of each observation
+```{r}
+list_of_medical_specialty <- diabetic_data %>%
+  group_by(medical_specialty) %>%
+  tally() %>%
+  mutate(percent = ((n / sum(n))*100)) %>%
+  mutate(percent = round(percent, 2)) %>%
+  arrange(desc(n)) %>%
+  collect()
+
+kable(list_of_medical_specialty,
+      "latex", booktabs = TRUE, longtable = TRUE, caption = "List of medical specialites") %>%
+  kable_styling(latex_options = c("hold_position", "repeat_header"))
+```
+### Feature engineering of `medical_specialty`
+Each category of `medical_speciality` is one hot encoded. I did not consolidate this group as getting a granular understanding of the influence that each group has on the readmission rate is important. As this can be directly fed back to the respective group to affect change. 
+
+```{r, tidy=TRUE, tidy.opts=list(width.cutoff=50)}
+#one_hot_encode medical_specialty
+diabetic_data <- diabetic_data %>%
+  mutate(
+    Cardiology = ifelse(medical_specialty == 'Cardiology' & !is.na(medical_specialty), 1,0),
+    ObstetricsandGynecology = ifelse(medical_specialty == 'ObstetricsandGynecology' & !is.na(medical_specialty), 1,0),
+    Pediatrics = ifelse(medical_specialty == 'Pediatrics' & !is.na(medical_specialty), 1,0),
+    SurgeryColonRectal = ifelse(medical_specialty == 'Surgery-Colon&Rectal' & !is.na(medical_specialty), 1,0),
+    PediatricsCriticalCare = ifelse(medical_specialty == 'Pediatrics-CriticalCare' & !is.na(medical_specialty), 1,0),
+    Anesthesiology_Pediatric = ifelse(medical_specialty == 'Anesthesiology-Pediatric' & !is.na(medical_specialty), 1,0),
+    Ophthalmology = ifelse(medical_specialty == 'Ophthalmology' & !is.na(medical_specialty), 1,0),
+    InfectiousDiseases = ifelse(medical_specialty == 'InfectiousDiseases' & !is.na(medical_specialty), 1,0),
+    SurgeryMaxillofacial = ifelse(medical_specialty == 'Surgery-Maxillofacial' & !is.na(medical_specialty), 1,0),
+    PsychiatryAddictive = ifelse(medical_specialty == 'Psychiatry-Addictive' & !is.na(medical_specialty), 1,0),
+    SurgeryCardiovascular = ifelse(medical_specialty == 'Surgery-Cardiovascular' & !is.na(medical_specialty), 1,0),
+    Speech = ifelse(medical_specialty == 'Speech' & !is.na(medical_specialty), 1,0),
+    Endocrinology_Metabolism = ifelse(medical_specialty == 'Endocrinology-Metabolism' & !is.na(medical_specialty), 1,0),
+    FamilyGeneralPractice = ifelse(medical_specialty == 'Family/GeneralPractice' & !is.na(medical_specialty), 1,0),
+    SurgeryGeneral = ifelse(medical_specialty == 'Surgery-General' & !is.na(medical_specialty), 1,0),
+    Orthopedics = ifelse(medical_specialty == 'Orthopedics' & !is.na(medical_specialty), 1,0),
+    EmergencyTrauma = ifelse(medical_specialty == 'Emergency/Trauma' & !is.na(medical_specialty), 1,0),
+    HematologyOncology = ifelse(medical_specialty == 'Hematology/Oncology' & !is.na(medical_specialty), 1,0),
+    Otolaryngology = ifelse(medical_specialty == 'Otolaryngology' & !is.na(medical_specialty), 1,0),
+    Oncology = ifelse(medical_specialty == 'Oncology' & !is.na(medical_specialty), 1,0),
+    SurgeryPediatric = ifelse(medical_specialty == 'Surgery-Pediatric' & !is.na(medical_specialty), 1,0),
+    PediatricsEmergencyMedicine = ifelse(medical_specialty == 'Pediatrics-EmergencyMedicine' & !is.na(medical_specialty), 1,0),
+    AllergyandImmunology = ifelse(medical_specialty == 'AllergyandImmunology' & !is.na(medical_specialty), 1,0),
+    PediatricsInfectiousDiseases = ifelse(medical_specialty == 'Pediatrics-InfectiousDiseases' & !is.na(medical_specialty), 1,0),
+    Osteopath = ifelse(medical_specialty == 'Osteopath' & !is.na(medical_specialty), 1,0),
+    SurgicalSpecialty = ifelse(medical_specialty == 'SurgicalSpecialty' & !is.na(medical_specialty), 1,0),
+    Dermatology = ifelse(medical_specialty == 'Dermatology' & !is.na(medical_specialty), 1,0),
+    SportsMedicine = ifelse(medical_specialty == 'SportsMedicine' & !is.na(medical_specialty), 1,0),
+    Resident = ifelse(medical_specialty == 'Resident' & !is.na(medical_specialty), 1,0),
+    InternalMedicine = ifelse(medical_specialty == 'InternalMedicine' & !is.na(medical_specialty), 1,0),
+    Gastroenterology = ifelse(medical_specialty == 'Gastroenterology' & !is.na(medical_specialty), 1,0),
+    SurgeryCardiovascularThoracic = ifelse(medical_specialty == 'Surgery-Cardiovascular/Thoracic' & !is.na(medical_specialty), 1,0),
+    Nephrology = ifelse(medical_specialty == 'Nephrology' & !is.na(medical_specialty), 1,0),
+    OrthopedicsReconstructive = ifelse(medical_specialty == 'Orthopedics-Reconstructive'& !is.na(medical_specialty), 1,0),
+    ObstericsGynecologyGynecologicOnco = ifelse(medical_specialty == 'Obsterics&Gynecology-GynecologicOnco' & !is.na(medical_specialty), 1,0),
+    Endocrinology = ifelse(medical_specialty == 'Endocrinology' & !is.na(medical_specialty), 1,0),
+    Pediatrics_Pulmonology = ifelse(medical_specialty == 'Pediatrics-Pulmonology' & !is.na(medical_specialty), 1,0),
+    Neurology = ifelse(medical_specialty == 'Neurology' & !is.na(medical_specialty), 1,0),
+    Psychology = ifelse(medical_specialty == 'Psychology' & !is.na(medical_specialty), 1,0),
+    Podiatry = ifelse(medical_specialty == 'Podiatry' & !is.na(medical_specialty), 1,0),
+    Gynecology = ifelse(medical_specialty == 'Gynecology' & !is.na(medical_specialty), 1,0),
+    SurgeryPlastic = ifelse(medical_specialty == 'Surgery-Plastic' & !is.na(medical_specialty), 1,0),
+    SurgeryThoracic = ifelse(medical_specialty == 'Surgery-Thoracic' & !is.na(medical_specialty), 1,0),
+    SurgeryPlasticwithinHeadandNeck = ifelse(medical_specialty == 'Surgery-PlasticwithinHeadandNeck' & !is.na(medical_specialty), 1,0),
+    PhysicalMedicineandRehabilitation = ifelse(medical_specialty == 'PhysicalMedicineandRehabilitation' & !is.na(medical_specialty), 1,0),
+    Rheumatology = ifelse(medical_specialty == 'Rheumatology' & !is.na(medical_specialty), 1,0),
+    PediatricsAllergyandImmunology = ifelse(medical_specialty == 'Pediatrics-AllergyandImmunology' & !is.na(medical_specialty), 1,0),
+    Surgeon = ifelse(medical_specialty == 'Surgeon' & !is.na(medical_specialty), 1,0),
+    SurgeryVascular = ifelse(medical_specialty == 'Surgery-Vascular' & !is.na(medical_specialty), 1,0),
+    Pathology = ifelse(medical_specialty == 'Pathology' & !is.na(medical_specialty), 1,0),
+    Hospitalist = ifelse(medical_specialty == 'Hospitalist'& !is.na(medical_specialty), 1,0),
+    OutreachServices = ifelse(medical_specialty == 'OutreachServices' & !is.na(medical_specialty), 1,0),
+    CardiologyPediatric = ifelse(medical_specialty == 'Cardiology-Pediatric'& !is.na(medical_specialty), 1,0),
+    Neurophysiology = ifelse(medical_specialty == 'Neurophysiology' & !is.na(medical_specialty), 1,0),
+    PediatricsEndocrinology = ifelse(medical_specialty == 'Pediatrics-Endocrinology'& !is.na(medical_specialty), 1,0),
+    Psychiatry = ifelse(medical_specialty == 'Psychiatry'& !is.na(medical_specialty), 1,0),
+    Pulmonology = ifelse(medical_specialty == 'Pulmonology'& !is.na(medical_specialty), 1,0),
+    SurgeryNeuro = ifelse(medical_specialty == 'Surgery-Neuro'& !is.na(medical_specialty), 1,0),
+    Urology = ifelse(medical_specialty == 'Urology'& !is.na(medical_specialty), 1,0),
+    PsychiatryChildAdolescent = ifelse(medical_specialty == 'Psychiatry-Child/Adolescent'& !is.na(medical_specialty), 1,0),
+    Radiology = ifelse(medical_specialty == 'Radiology'& !is.na(medical_specialty), 1,0),
+    PediatricsHematologyOncology = ifelse(medical_specialty == 'Pediatrics-Hematology-Oncology'& !is.na(medical_specialty), 1,0),
+    PediatricsNeurology = ifelse(medical_specialty == 'Pediatrics-Neurology'& !is.na(medical_specialty), 1,0),
+    Anesthesiology = ifelse(medical_specialty == 'Anesthesiology'& !is.na(medical_specialty), 1,0),
+    Dentistry = ifelse(medical_specialty == 'Dentistry'& !is.na(medical_specialty), 1,0),
+    PhysicianNotFound = ifelse(medical_specialty == 'PhysicianNotFound'& !is.na(medical_specialty), 1,0),
+    Hematology = ifelse(medical_specialty == 'Hematology'& !is.na(medical_specialty), 1,0),
+    Proctology = ifelse(medical_specialty == 'Proctology'& !is.na(medical_specialty), 1,0),
+    Obstetrics = ifelse(medical_specialty == 'Obstetrics'& !is.na(medical_specialty), 1,0),
+    Radiologist = ifelse(medical_specialty == 'Radiologist'& !is.na(medical_specialty), 1,0),
+    Perinatology = ifelse(medical_specialty == 'Perinatology'& !is.na(medical_specialty), 1,0),
+    DCPTEAM = ifelse(medical_specialty == 'DCPTEAM' & !is.na(medical_specialty), 1,0),
+    medical_specialty_unkown = ifelse(is.na(medical_specialty), 1,0))
+```
+
+## Admission type
+### Consolidation of `admission_type_id`
+`admission_type_id` in consolidated into 4 categories. Using the IDs_mapping.csv file the numerical value for `admission_type_id` is exchanged for character / descriptive value
+```{r, tidy=TRUE, tidy.opts=list(width.cutoff=50)}
+diabetic_data <- diabetic_data %>%
+  mutate(
+    admission_type_consolidated = case_when(
+      admission_type_id %in% c(1) ~ 'emergency',
+      admission_type_id %in% c(2) ~ 'urgent',
+      admission_type_id %in%c(3) ~ 'elective',
+      admission_type_id %in% c(4,5,6,7,8) ~ 'admisison_type_other',
+      is.na(admission_type_id) ~ 'admisison_type_other', #NA variables do not get special treatment
+      TRUE ~ admission_type_id))
+```
+
+### One hot encoding of `admission_type_consolidated`
+The `admission_type_consolidated` variable is then one hot encoded 
+```{r, tidy=TRUE, tidy.opts=list(width.cutoff=50)}
+diabetic_data <- diabetic_data %>%
+  mutate(
+    emergency = ifelse(admission_type_consolidated == 'emergency', 1,0),
+    urgent = ifelse(admission_type_consolidated == 'urgent', 1,0),
+    elective = ifelse(admission_type_consolidated == 'elective', 1,0),
+    admisison_type_other = ifelse(admission_type_consolidated == 'admisison_type_other', 1,0))
+```
+
+## Discharge disposition
+### Consolidation of `discharge_disposition` variable
+`discharge_disposition` in consolidated into 9 categories. Using the IDs_mapping.csv file the numerical value for `discharge_disposition` is exchanged for a character / descriptive value
+```{r, tidy=TRUE, tidy.opts=list(width.cutoff=50)}
+diabetic_data <- diabetic_data %>%
+  mutate(
+    discharge_disposition_consolidated = case_when(
+      discharge_disposition_id %in% c(1) ~ 'home',
+      discharge_disposition_id %in% c(2,3,4,5,10,22,23,24,30,27,28,29) ~ 'healthcare_facility',
+      discharge_disposition_id %in%c(6,8) ~ 'home_with_help',
+      discharge_disposition_id %in% c(7) ~ 'AMA',
+      discharge_disposition_id %in% c(9) ~ 'admitted',
+      discharge_disposition_id %in% c(11,13,14,15,19,20,21) ~ 'hospice_expired',
+      discharge_disposition_id %in% c(12,16,17) ~ 'outpatient',
+      discharge_disposition_id %in% c(18,25,26) ~ 'unknown_discharge_disposition',
+      is.na(discharge_disposition_id) ~ 'unknown_discharge_disposition',
+      TRUE ~ discharge_disposition_id))
+```
+
+### Graphing of consolidated discharge dispositions
+```{r, tidy=TRUE, tidy.opts=list(width.cutoff=50)}
+discharge_disposition_group = diabetic_data %>% 
+  count(discharge_disposition_consolidated) %>%
+  arrange(discharge_disposition_consolidated) %>%
+  collect()
+
+discharge_disposition_plot <-
+  ggplot(aes(as.factor(discharge_disposition_consolidated), n), data = discharge_disposition_group) +
+  geom_col(fill = 'SteelBlue') +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  xlab('Discharge disposition') +
+  ylab('Count')
+
+discharge_disposition_plot
+```
+
+### One hot encoding of `discharge_disposition_consolidated`
+The consolidated discharge disposition variable ( `discharge_disposition_consolidated`) is then one hot encoded
+```{r, tidy=TRUE, tidy.opts=list(width.cutoff=40)}
+#one_hot_encode discharge_disposition_consolidated
+diabetic_data <- diabetic_data %>%
+  mutate(
+    home = ifelse(discharge_disposition_consolidated == 'home', 1,0),
+    healthcare_facility = ifelse(discharge_disposition_consolidated == 'healthcare_facility', 1,0),
+    home_with_help = ifelse(discharge_disposition_consolidated == 'home_with_help', 1,0),
+    AMA = ifelse(discharge_disposition_consolidated == 'AMA', 1,0),
+    admitted = ifelse(discharge_disposition_consolidated == 'admitted', 1,0),
+    hospice_expired = ifelse(discharge_disposition_consolidated == 'hospice_expired', 1,0),
+    outpatient = ifelse(discharge_disposition_consolidated == 'outpatient', 1,0),
+    unknown_discharge_disposition = ifelse(discharge_disposition_consolidated == 'unknown_discharge_disposition', 1,0))
+```
+
+## Change to diabetic medication
+The `change` variable indicates if there was a change in diabetic medications (either dosage or generic name). Initial values are: “change” and “no change”. These are respectively encoded to 1 and 0.
+```{r}
+diabetic_data <- diabetic_data %>%
+  mutate(
+    change = ifelse(change == 'Ch', 1,0)
+  )
+```
+
+## Diabetes medication
+The `diabetesMed` variable indicates if there was any diabetic medication prescribed. Values are: “yes” and “no”. These are respectively encoded to 1 and 0.
+```{r}
+diabetic_data <- diabetic_data %>%
+  mutate(
+    diabetesMed = ifelse(diabetesMed == 'Yes', 1,0)
+  )
+```
+
+
+
+# Partitioning of dataset
+The `diabetic_data` dataset is partition into a **training** and **test** dataset.
+Importantly this is done before creating the z-scores for the respective numerical variables. Otherwise there would be cross over of data.
+```{r}
+diabetic_data_partitions <- diabetic_data %>%
+  sdf_random_split(diabetic_data_training = 0.3, diabetic_data_test = 0.7, seed = 1099)
+```
